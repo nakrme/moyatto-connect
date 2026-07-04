@@ -390,7 +390,7 @@ function App() {
               autoFocus
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="もやっとしたことを書く"
+              placeholder="思いついたことをなんでも書いてみよう"
             />
             <div className="composer-image-preview" aria-hidden="true" />
             <div className="composer-tool-row" aria-label="画像追加">
