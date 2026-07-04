@@ -95,40 +95,6 @@
   box-shadow: none;
 }
 
-.idea-card.flying-to-connect {
-  pointer-events: none;
-  animation: fly-to-connect 220ms ease-out forwards;
-}
-
-.idea-card.flying-to-idea {
-  pointer-events: none;
-  animation: fly-to-idea 220ms ease-out forwards;
-}
-
-@keyframes fly-to-connect {
-  0% {
-    opacity: 1;
-    transform: translateX(86px);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateX(150px);
-  }
-}
-
-@keyframes fly-to-idea {
-  0% {
-    opacity: 1;
-    transform: translateX(-86px);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateX(-150px);
-  }
-}
-
 .image-placeholder {
   width: 63px;
   height: 63px;

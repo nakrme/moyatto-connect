@@ -14,11 +14,6 @@ type Idea = {
   createdAt: number
 }
 
-type FlyingIdea = {
-  id: string
-  direction: 'to-connect' | 'to-idea'
-} | null
-
 const STORAGE_KEY = 'moyatto-connect-v1'
 
 const starterIdeas: Idea[] = []
@@ -48,7 +43,6 @@ function App() {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState('')
   const [editingImageUrl, setEditingImageUrl] = useState('')
-  const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
   const [draftImageUrl, setDraftImageUrl] = useState('')
   const [keyboardInset, setKeyboardInset] = useState(0)
@@ -181,34 +175,26 @@ function App() {
   function toggleImportant(id: string) {
     const idea = ideas.find((currentIdea) => currentIdea.id === id)
     if (idea && !idea.important) {
-      setFlyingIdea({ id, direction: 'to-connect' })
-      window.setTimeout(() => {
-        setIdeas((current) =>
-          current.map((currentIdea) =>
-            currentIdea.id === id ? { ...currentIdea, important: true } : currentIdea,
-          ),
-        )
-        setConnectOrder((current) =>
-          current.includes(id) ? current : [...current, id],
-        )
-        setFlyingIdea(null)
-      }, 360)
+      setIdeas((current) =>
+        current.map((currentIdea) =>
+          currentIdea.id === id ? { ...currentIdea, important: true } : currentIdea,
+        ),
+      )
+      setConnectOrder((current) =>
+        current.includes(id) ? current : [...current, id],
+      )
       return
     }
 
     if (idea?.important) {
-      setFlyingIdea({ id, direction: 'to-idea' })
-      window.setTimeout(() => {
-        setIdeas((current) =>
-          current.map((currentIdea) =>
-            currentIdea.id === id
-              ? { ...currentIdea, important: false }
-              : currentIdea,
-          ),
-        )
-        setConnectOrder((current) => current.filter((currentId) => currentId !== id))
-        setFlyingIdea(null)
-      }, 360)
+      setIdeas((current) =>
+        current.map((currentIdea) =>
+          currentIdea.id === id
+            ? { ...currentIdea, important: false }
+            : currentIdea,
+        ),
+      )
+      setConnectOrder((current) => current.filter((currentId) => currentId !== id))
       return
     }
 
@@ -281,7 +267,6 @@ function App() {
         <div className="content">
           {tab === 'idea' ? (
             <IdeaTab
-              flyingIdea={flyingIdea}
               ideas={ideas.filter((idea) => !idea.important)}
               onDeleteIdea={deleteIdea}
               onEditIdea={startEditIdea}
@@ -296,7 +281,6 @@ function App() {
               onStartReorder={setReorderingIdeaId}
               onStopReorder={() => setReorderingIdeaId(null)}
               reorderingIdeaId={reorderingIdeaId}
-              flyingIdea={flyingIdea}
             />
           )}
         </div>
@@ -465,13 +449,11 @@ function App() {
 }
 
 function IdeaTab({
-  flyingIdea,
   ideas,
   onDeleteIdea,
   onEditIdea,
   onToggleImportant,
 }: {
-  flyingIdea: FlyingIdea
   ideas: Idea[]
   onDeleteIdea: (id: string) => void
   onEditIdea: (idea: Idea) => void
@@ -481,9 +463,6 @@ function IdeaTab({
     <div className="idea-list">
       {ideas.map((idea) => (
         <SwipeCard
-          flyDirection={
-            flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
-          }
           idea={idea}
           key={idea.id}
           onDelete={() => onDeleteIdea(idea.id)}
@@ -496,13 +475,11 @@ function IdeaTab({
 }
 
 function SwipeCard({
-  flyDirection,
   idea,
   onDelete,
   onEdit,
   onSwipe,
 }: {
-  flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
   onDelete: () => void
   onEdit: () => void
@@ -510,22 +487,18 @@ function SwipeCard({
 }) {
   const [startX, setStartX] = useState(0)
   const [offsetX, setOffsetX] = useState(0)
-  const isFlying = Boolean(flyDirection)
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     setStartX(event.clientX)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     if (!startX) return
     setOffsetX(Math.max(-86, Math.min(86, event.clientX - startX)))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     const finalOffsetX = Math.max(-86, Math.min(86, event.clientX - startX))
     if (finalOffsetX > 54) onSwipe()
     else if (finalOffsetX < -54) onDelete()
@@ -536,7 +509,7 @@ function SwipeCard({
 
   return (
     <article
-      className={`idea-card ${idea.important ? 'important' : ''} ${flyDirection ? `flying-${flyDirection}` : ''}`}
+      className={`idea-card ${idea.important ? 'important' : ''}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -561,7 +534,6 @@ function IdeaImage({ idea }: { idea: Idea }) {
 }
 
 function ConnectTab({
-  flyingIdea,
   ideas,
   onEditIdea,
   onMoveIdea,
@@ -570,7 +542,6 @@ function ConnectTab({
   onStopReorder,
   reorderingIdeaId,
 }: {
-  flyingIdea: FlyingIdea
   ideas: Idea[]
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (
@@ -587,9 +558,6 @@ function ConnectTab({
     <div className="connect-list">
       {ideas.map((idea) => (
         <ConnectSwipeCard
-          flyDirection={
-            flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
-          }
           idea={idea}
           key={idea.id}
           onEdit={() => onEditIdea(idea)}
@@ -605,7 +573,6 @@ function ConnectTab({
 }
 
 function ConnectSwipeCard({
-  flyDirection,
   idea,
   onEdit,
   onMoveIdea,
@@ -614,7 +581,6 @@ function ConnectSwipeCard({
   onStopReorder,
   reorderingIdeaId,
 }: {
-  flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
   onEdit: () => void
   onMoveIdea: (
@@ -632,23 +598,19 @@ function ConnectSwipeCard({
   const [dragStartY, setDragStartY] = useState(0)
   const [offsetY, setOffsetY] = useState(0)
   const isDragging = useRef(false)
-  const isFlying = Boolean(flyDirection)
   const isThisReordering = reorderingIdeaId === idea.id
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     setStartX(event.clientX)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     if (!startX) return
     setOffsetX(Math.min(0, Math.max(-86, event.clientX - startX)))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     const finalOffsetX = Math.min(0, Math.max(-86, event.clientX - startX))
     if (finalOffsetX < -54) onSwipeLeft()
     if (finalOffsetX > -8) onEdit()
@@ -657,7 +619,6 @@ function ConnectSwipeCard({
   }
 
   function onHandlePointerDown(event: PointerEvent<HTMLElement>) {
-    if (isFlying) return
     event.stopPropagation()
     isDragging.current = true
     setDragStartY(event.clientY)
@@ -705,7 +666,7 @@ function ConnectSwipeCard({
 
   return (
     <article
-      className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''} ${isThisReordering ? 'reordering' : ''}`}
+      className={`idea-card connect-card ${isThisReordering ? 'reordering' : ''}`}
       data-connect-idea-id={idea.id}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
