@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, FormEvent, PointerEvent } from 'react'
-import { AiOutlinePicture } from 'react-icons/ai'
-import { CiCamera } from 'react-icons/ci'
+import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
 import './App.css'
 
 type Tab = 'idea' | 'connect'
@@ -396,7 +395,7 @@ function App() {
             <div className="composer-image-preview" aria-hidden="true" />
             <div className="composer-tool-row" aria-label="画像追加">
               <button aria-label="カメラ" type="button">
-                <CiCamera />
+                <AiOutlineCamera />
               </button>
               <button aria-label="写真" type="button">
                 <AiOutlinePicture />
