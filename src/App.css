@@ -172,6 +172,12 @@
   cursor: grabbing;
 }
 
+.connect-card.reordering {
+  z-index: 3;
+  opacity: 0.92;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
 .sticky-label {
   align-self: flex-start;
   min-width: 40px;

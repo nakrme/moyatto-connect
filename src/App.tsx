@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, FormEvent, PointerEvent } from 'react'
 import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
 import './App.css'
@@ -76,6 +76,7 @@ function App() {
   const [stickyTitle, setStickyTitle] = useState('')
   const [stickyColor, setStickyColor] = useState(colors[0].value)
   const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
+  const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
 
   useEffect(() => {
     localStorage.setItem(
@@ -230,6 +231,42 @@ function App() {
     )
   }
 
+  function stickyForIdea(ideaId: string) {
+    const ideaIndex = importantIdeas.findIndex((importantIdea) => importantIdea.id === ideaId)
+    if (ideaIndex === -1) return undefined
+
+    return orderedStickies
+      .filter((sticky) => {
+        if (sticky.afterIdeaId === null) return true
+        const stickyIndex = importantIdeas.findIndex(
+          (importantIdea) => importantIdea.id === sticky.afterIdeaId,
+        )
+        return stickyIndex < ideaIndex
+      })
+      .at(-1)
+  }
+
+  function moveConnectIdea(sourceId: string, targetId: string) {
+    if (sourceId === targetId) return
+
+    const sourceSticky = stickyForIdea(sourceId)
+    const destinationSticky = stickyForIdea(targetId)
+
+    setConnectOrder((current) => {
+      const next = current.filter((id) => id !== sourceId)
+      const targetIndex = next.indexOf(targetId)
+      if (targetIndex === -1) return current
+      next.splice(targetIndex, 0, sourceId)
+      return next
+    })
+
+    if (sourceSticky && sourceSticky.id !== destinationSticky?.id) {
+      setStickies((current) =>
+        current.filter((sticky) => sticky.id !== sourceSticky.id),
+      )
+    }
+  }
+
   function addSticky(event: FormEvent) {
     event.preventDefault()
     const title = stickyTitle.trim()
@@ -325,8 +362,12 @@ function App() {
               stickies={orderedStickies}
               colorForIdea={colorForIdea}
               onEditIdea={startEditIdea}
+              onMoveIdea={moveConnectIdea}
               onOpenSticky={(afterIdeaId) => setStickyTarget(afterIdeaId)}
               onReturnIdea={toggleImportant}
+              onStartReorder={setReorderingIdeaId}
+              onStopReorder={() => setReorderingIdeaId(null)}
+              reorderingIdeaId={reorderingIdeaId}
               flyingIdea={flyingIdea}
             />
           )}
@@ -533,16 +574,24 @@ function ConnectTab({
   stickies,
   colorForIdea,
   onEditIdea,
+  onMoveIdea,
   onOpenSticky,
   onReturnIdea,
+  onStartReorder,
+  onStopReorder,
+  reorderingIdeaId,
 }: {
   flyingIdea: FlyingIdea
   ideas: Idea[]
   stickies: Sticky[]
   colorForIdea: (id: string) => string
   onEditIdea: (idea: Idea) => void
+  onMoveIdea: (sourceId: string, targetId: string) => void
   onOpenSticky: (afterIdeaId: string | null) => void
   onReturnIdea: (id: string) => void
+  onStartReorder: (id: string) => void
+  onStopReorder: () => void
+  reorderingIdeaId: string | null
 }) {
   if (ideas.length === 0) {
     return <div className="connect-list" />
@@ -577,7 +626,11 @@ function ConnectTab({
               }
               idea={idea}
               onEdit={() => onEditIdea(idea)}
+              onMoveIdea={onMoveIdea}
               onSwipeLeft={() => onReturnIdea(idea.id)}
+              onStartReorder={() => onStartReorder(idea.id)}
+              onStopReorder={onStopReorder}
+              reorderingIdeaId={reorderingIdeaId}
               style={{ '--bar-color': colorForIdea(idea.id) } as CSSProperties}
             />
           </div>
@@ -591,47 +644,109 @@ function ConnectSwipeCard({
   flyDirection,
   idea,
   onEdit,
+  onMoveIdea,
   onSwipeLeft,
+  onStartReorder,
+  onStopReorder,
+  reorderingIdeaId,
   style,
 }: {
   flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
   onEdit: () => void
+  onMoveIdea: (sourceId: string, targetId: string) => void
   onSwipeLeft: () => void
+  onStartReorder: () => void
+  onStopReorder: () => void
+  reorderingIdeaId: string | null
   style: CSSProperties
 }) {
   const [startX, setStartX] = useState(0)
+  const [startY, setStartY] = useState(0)
   const [offsetX, setOffsetX] = useState(0)
+  const [offsetY, setOffsetY] = useState(0)
+  const longPressTimer = useRef<number | undefined>(undefined)
+  const isReordering = useRef(false)
   const isFlying = Boolean(flyDirection)
+  const isThisReordering = reorderingIdeaId === idea.id
+
+  function clearLongPressTimer() {
+    if (!longPressTimer.current) return
+    window.clearTimeout(longPressTimer.current)
+    longPressTimer.current = undefined
+  }
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
     setStartX(event.clientX)
+    setStartY(event.clientY)
+    isReordering.current = false
+    longPressTimer.current = window.setTimeout(() => {
+      isReordering.current = true
+      setOffsetX(0)
+      setOffsetY(0)
+      onStartReorder()
+    }, 420)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
     if (!startX) return
-    setOffsetX(Math.min(0, Math.max(-86, event.clientX - startX)))
+    const deltaX = event.clientX - startX
+    const deltaY = event.clientY - startY
+
+    if (isReordering.current) {
+      setOffsetY(deltaY)
+      return
+    }
+
+    if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+      clearLongPressTimer()
+    }
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return
+
+    setOffsetX(Math.min(0, Math.max(-86, deltaX)))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
+    clearLongPressTimer()
+
+    if (isReordering.current) {
+      const target = document
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.closest('[data-connect-idea-id]')
+      const targetId = target?.getAttribute('data-connect-idea-id')
+
+      if (targetId) {
+        onMoveIdea(idea.id, targetId)
+      }
+      isReordering.current = false
+      onStopReorder()
+      setStartX(0)
+      setStartY(0)
+      setOffsetX(0)
+      setOffsetY(0)
+      return
+    }
+
     const finalOffsetX = Math.min(0, Math.max(-86, event.clientX - startX))
     if (finalOffsetX < -54) onSwipeLeft()
     if (finalOffsetX > -8) onEdit()
     setStartX(0)
+    setStartY(0)
     setOffsetX(0)
   }
 
   return (
     <article
-      className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''}`}
+      className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''} ${isThisReordering ? 'reordering' : ''}`}
+      data-connect-idea-id={idea.id}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      style={{ ...style, transform: `translateX(${offsetX}px)` }}
+      style={{ ...style, transform: `translate(${offsetX}px, ${offsetY}px)` }}
     >
       <p>{idea.text}</p>
     </article>
