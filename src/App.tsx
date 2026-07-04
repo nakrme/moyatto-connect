@@ -24,6 +24,11 @@ type DragItem =
   | { kind: 'sticky'; id: string }
   | null
 
+type FlyingIdea = {
+  id: string
+  direction: 'to-connect' | 'to-idea'
+} | null
+
 const STORAGE_KEY = 'moyatto-connect-v1'
 
 const colors = [
@@ -69,7 +74,7 @@ function App() {
   const [stickyTitle, setStickyTitle] = useState('')
   const [stickyColor, setStickyColor] = useState(colors[0].value)
   const [dragItem, setDragItem] = useState<DragItem>(null)
-  const [flyingIdeaId, setFlyingIdeaId] = useState<string | null>(null)
+  const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
 
   useEffect(() => {
     localStorage.setItem(
@@ -166,7 +171,7 @@ function App() {
   function toggleImportant(id: string) {
     const idea = ideas.find((currentIdea) => currentIdea.id === id)
     if (idea && !idea.important) {
-      setFlyingIdeaId(id)
+      setFlyingIdea({ id, direction: 'to-connect' })
       window.setTimeout(() => {
         setIdeas((current) =>
           current.map((currentIdea) =>
@@ -176,8 +181,26 @@ function App() {
         setConnectOrder((current) =>
           current.includes(id) ? current : [...current, id],
         )
-        setFlyingIdeaId(null)
-        setTab('connect')
+        setFlyingIdea(null)
+      }, 360)
+      return
+    }
+
+    if (idea?.important) {
+      setFlyingIdea({ id, direction: 'to-idea' })
+      window.setTimeout(() => {
+        setIdeas((current) =>
+          current.map((currentIdea) =>
+            currentIdea.id === id
+              ? { ...currentIdea, important: false }
+              : currentIdea,
+          ),
+        )
+        setConnectOrder((current) => current.filter((currentId) => currentId !== id))
+        setStickies((current) =>
+          current.filter((sticky) => sticky.afterIdeaId !== id),
+        )
+        setFlyingIdea(null)
       }, 360)
       return
     }
@@ -328,7 +351,7 @@ function App() {
         <div className="content">
           {tab === 'idea' ? (
             <IdeaTab
-              flyingIdeaId={flyingIdeaId}
+              flyingIdea={flyingIdea}
               ideas={ideas}
               onEditIdea={startEditIdea}
               onToggleImportant={toggleImportant}
@@ -343,6 +366,8 @@ function App() {
               onDragEnd={() => setDragItem(null)}
               onEditIdea={startEditIdea}
               onOpenSticky={(afterIdeaId) => setStickyTarget(afterIdeaId)}
+              onReturnIdea={toggleImportant}
+              flyingIdea={flyingIdea}
             />
           )}
         </div>
@@ -451,12 +476,12 @@ function App() {
 }
 
 function IdeaTab({
-  flyingIdeaId,
+  flyingIdea,
   ideas,
   onEditIdea,
   onToggleImportant,
 }: {
-  flyingIdeaId: string | null
+  flyingIdea: FlyingIdea
   ideas: Idea[]
   onEditIdea: (idea: Idea) => void
   onToggleImportant: (id: string) => void
@@ -465,7 +490,9 @@ function IdeaTab({
     <div className="idea-list">
       {ideas.map((idea) => (
         <SwipeCard
-          isFlying={flyingIdeaId === idea.id}
+          flyDirection={
+            flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
+          }
           idea={idea}
           key={idea.id}
           onEdit={() => onEditIdea(idea)}
@@ -477,18 +504,19 @@ function IdeaTab({
 }
 
 function SwipeCard({
-  isFlying,
+  flyDirection,
   idea,
   onEdit,
   onSwipe,
 }: {
-  isFlying: boolean
+  flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
   onEdit: () => void
   onSwipe: () => void
 }) {
   const [startX, setStartX] = useState(0)
   const [offsetX, setOffsetX] = useState(0)
+  const isFlying = Boolean(flyDirection)
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
@@ -512,7 +540,7 @@ function SwipeCard({
 
   return (
     <article
-      className={`idea-card ${idea.important ? 'important' : ''} ${isFlying ? 'flying-to-connect' : ''}`}
+      className={`idea-card ${idea.important ? 'important' : ''} ${flyDirection ? `flying-${flyDirection}` : ''}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -525,6 +553,7 @@ function SwipeCard({
 }
 
 function ConnectTab({
+  flyingIdea,
   ideas,
   stickies,
   colorForIdea,
@@ -533,7 +562,9 @@ function ConnectTab({
   onDragEnd,
   onEditIdea,
   onOpenSticky,
+  onReturnIdea,
 }: {
+  flyingIdea: FlyingIdea
   ideas: Idea[]
   stickies: Sticky[]
   colorForIdea: (id: string) => string
@@ -542,6 +573,7 @@ function ConnectTab({
   onDragEnd: () => void
   onEditIdea: (idea: Idea) => void
   onOpenSticky: (afterIdeaId: string | null) => void
+  onReturnIdea: (id: string) => void
 }) {
   if (ideas.length === 0) {
     return <div className="connect-list" />
@@ -574,22 +606,83 @@ function ConnectTab({
                 +
               </button>
             )}
-            <article
-              className="idea-card connect-card"
-              draggable
+            <ConnectSwipeCard
+              flyDirection={
+                flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
+              }
+              idea={idea}
               onDragEnd={onDragEnd}
-              onDragOver={(event) => event.preventDefault()}
               onDragStart={() => onDragStart({ kind: 'idea', id: idea.id })}
               onDrop={() => onDropIdea(idea.id)}
-              onClick={() => onEditIdea(idea)}
+              onEdit={() => onEditIdea(idea)}
+              onSwipeLeft={() => onReturnIdea(idea.id)}
               style={{ '--bar-color': colorForIdea(idea.id) } as CSSProperties}
-            >
-              <p>{idea.text}</p>
-            </article>
+            />
           </div>
         )
       })}
     </div>
+  )
+}
+
+function ConnectSwipeCard({
+  flyDirection,
+  idea,
+  onDragEnd,
+  onDragStart,
+  onDrop,
+  onEdit,
+  onSwipeLeft,
+  style,
+}: {
+  flyDirection?: 'to-connect' | 'to-idea'
+  idea: Idea
+  onDragEnd: () => void
+  onDragStart: () => void
+  onDrop: () => void
+  onEdit: () => void
+  onSwipeLeft: () => void
+  style: CSSProperties
+}) {
+  const [startX, setStartX] = useState(0)
+  const [offsetX, setOffsetX] = useState(0)
+  const isFlying = Boolean(flyDirection)
+
+  function onPointerDown(event: PointerEvent<HTMLElement>) {
+    if (isFlying) return
+    setStartX(event.clientX)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function onPointerMove(event: PointerEvent<HTMLElement>) {
+    if (isFlying) return
+    if (!startX) return
+    setOffsetX(Math.min(0, Math.max(-86, event.clientX - startX)))
+  }
+
+  function onPointerUp() {
+    if (isFlying) return
+    if (offsetX < -54) onSwipeLeft()
+    if (offsetX > -8) onEdit()
+    setStartX(0)
+    setOffsetX(0)
+  }
+
+  return (
+    <article
+      className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''}`}
+      draggable
+      onDragEnd={onDragEnd}
+      onDragOver={(event) => event.preventDefault()}
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      style={{ ...style, transform: `translateX(${offsetX}px)` }}
+    >
+      <p>{idea.text}</p>
+    </article>
   )
 }
 

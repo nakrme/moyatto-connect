@@ -105,6 +105,12 @@
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
 }
 
+.idea-card.flying-to-idea {
+  pointer-events: none;
+  animation: fly-to-idea 360ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
+}
+
 @keyframes fly-to-connect {
   0% {
     opacity: 1;
@@ -119,6 +125,23 @@
   100% {
     opacity: 0;
     transform: translateX(76px) translateY(520px) scale(0.78);
+  }
+}
+
+@keyframes fly-to-idea {
+  0% {
+    opacity: 1;
+    transform: translateX(-86px) translateY(0) scale(1);
+  }
+
+  65% {
+    opacity: 0.92;
+    transform: translateX(-42px) translateY(220px) scale(0.96);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-76px) translateY(520px) scale(0.78);
   }
 }
 
