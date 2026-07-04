@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, FormEvent, PointerEvent } from 'react'
+import type { CSSProperties, ChangeEvent, FormEvent, PointerEvent } from 'react'
 import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
 import './App.css'
 
@@ -9,6 +9,7 @@ type Idea = {
   id: string
   text: string
   image?: boolean
+  imageUrl?: string
   important: boolean
   createdAt: number
 }
@@ -77,6 +78,9 @@ function App() {
   const [stickyColor, setStickyColor] = useState(colors[0].value)
   const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
+  const [draftImageUrl, setDraftImageUrl] = useState('')
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const pictureInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     localStorage.setItem(
@@ -122,19 +126,40 @@ function App() {
   function addIdea(event: FormEvent) {
     event.preventDefault()
     const text = draft.trim()
-    if (!text) return
+    if (!text && !draftImageUrl) return
 
     const id = crypto.randomUUID()
     const important = tab === 'connect'
     setIdeas((current) => [
       ...current,
-      { id, text, important, createdAt: Date.now() },
+      {
+        id,
+        text,
+        imageUrl: draftImageUrl || undefined,
+        important,
+        createdAt: Date.now(),
+      },
     ])
     if (important) {
       setConnectOrder((current) => [...current, id])
     }
     setDraft('')
+    setDraftImageUrl('')
     setAddingIdea(false)
+  }
+
+  function handleDraftImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setDraftImageUrl(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+    event.target.value = ''
   }
 
   function startEditIdea(idea: Idea) {
@@ -392,12 +417,39 @@ function App() {
               onChange={(event) => setDraft(event.target.value)}
               placeholder="思いついたことをなんでも書いてみよう"
             />
-            <div className="composer-image-preview" aria-hidden="true" />
+            {draftImageUrl ? (
+              <div className="composer-image-preview">
+                <img src={draftImageUrl} alt="" />
+              </div>
+            ) : null}
+            <input
+              accept="image/*"
+              capture="environment"
+              className="visually-hidden-file"
+              onChange={handleDraftImageChange}
+              ref={cameraInputRef}
+              type="file"
+            />
+            <input
+              accept="image/*"
+              className="visually-hidden-file"
+              onChange={handleDraftImageChange}
+              ref={pictureInputRef}
+              type="file"
+            />
             <div className="composer-tool-row" aria-label="画像追加">
-              <button aria-label="カメラ" type="button">
+              <button
+                aria-label="カメラ"
+                onClick={() => cameraInputRef.current?.click()}
+                type="button"
+              >
                 <AiOutlineCamera />
               </button>
-              <button aria-label="写真" type="button">
+              <button
+                aria-label="写真"
+                onClick={() => pictureInputRef.current?.click()}
+                type="button"
+              >
                 <AiOutlinePicture />
               </button>
             </div>
@@ -563,9 +615,21 @@ function SwipeCard({
       style={{ transform: `translateX(${offsetX}px)` }}
     >
       <p>{idea.text}</p>
-      {idea.image ? <div className="image-placeholder" /> : null}
+      <IdeaImage idea={idea} />
     </article>
   )
+}
+
+function IdeaImage({ idea }: { idea: Idea }) {
+  if (idea.imageUrl) {
+    return <img className="idea-card-image" src={idea.imageUrl} alt="" />
+  }
+
+  if (idea.image) {
+    return <div className="image-placeholder" />
+  }
+
+  return null
 }
 
 function ConnectTab({
@@ -749,6 +813,7 @@ function ConnectSwipeCard({
       style={{ ...style, transform: `translate(${offsetX}px, ${offsetY}px)` }}
     >
       <p>{idea.text}</p>
+      <IdeaImage idea={idea} />
     </article>
   )
 }
