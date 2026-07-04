@@ -709,7 +709,7 @@ function ConnectSwipeCard({
 
   return (
     <article
-      className={`idea-card connect-card ${isThisReordering ? 'reordering' : ''}`}
+      className={`idea-card connect-card ${colorMenuOpen ? 'color-menu-open' : ''} ${isThisReordering ? 'reordering' : ''}`}
       data-connect-idea-id={idea.id}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

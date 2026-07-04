@@ -120,6 +120,10 @@
   padding-left: 38px;
 }
 
+.connect-card.color-menu-open {
+  z-index: 20;
+}
+
 .connect-card.reordering {
   z-index: 3;
   opacity: 0.92;
