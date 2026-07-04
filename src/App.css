@@ -155,12 +155,15 @@
   border-radius: 0;
   object-fit: cover;
   flex: 0 0 auto;
+  -webkit-user-drag: none;
 }
 
 .connect-card {
   min-height: 60px;
   cursor: grab;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
 }
 
 .connect-card:active {
