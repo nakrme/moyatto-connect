@@ -10,13 +10,19 @@ type Idea = {
   text: string
   image?: boolean
   imageUrl?: string
-  barColor?: string
   important: boolean
   createdAt: number
 }
 
+type Heading = {
+  id: string
+  title: string
+  color: string
+  afterIdeaId: string | null
+}
+
 const STORAGE_KEY = 'moyatto-connect-v1'
-const barColors = [
+const headingColors = [
   '#000002',
   '#ba3264',
   '#f31059',
@@ -57,8 +63,14 @@ function App() {
   const [editingDraft, setEditingDraft] = useState('')
   const [editingImageUrl, setEditingImageUrl] = useState('')
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
-  const [colorMenuIdeaId, setColorMenuIdeaId] = useState<string | null>(null)
+  const [headingTarget, setHeadingTarget] = useState<string | null | undefined>()
+  const [headingTitle, setHeadingTitle] = useState('')
+  const [headingColor, setHeadingColor] = useState(headingColors[0])
   const [draftImageUrl, setDraftImageUrl] = useState('')
+  const [headings, setHeadings] = useState<Heading[]>(() => {
+    const saved = savedData()
+    return saved?.headings ?? []
+  })
   const [keyboardInset, setKeyboardInset] = useState(0)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const pictureInputRef = useRef<HTMLInputElement>(null)
@@ -87,16 +99,17 @@ function App() {
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ appTitle, ideas, connectOrder }),
+      JSON.stringify({ appTitle, ideas, connectOrder, headings }),
     )
-  }, [appTitle, ideas, connectOrder])
+  }, [appTitle, ideas, connectOrder, headings])
 
   useEffect(() => {
     if (ideas.some((idea) => idea.important)) return
-    if (connectOrder.length === 0) return
+    if (connectOrder.length === 0 && headings.length === 0) return
 
     setConnectOrder([])
-  }, [connectOrder.length, ideas])
+    setHeadings([])
+  }, [connectOrder.length, headings.length, ideas])
 
   const importantIdeas = useMemo(() => {
     const currentIds = ideas
@@ -109,9 +122,20 @@ function App() {
       .map((id) => ideas.find((idea) => idea.id === id))
       .filter(Boolean) as Idea[]
   }, [connectOrder, ideas])
-  const colorMenuIdea = colorMenuIdeaId
-    ? ideas.find((idea) => idea.id === colorMenuIdeaId)
-    : undefined
+
+  const orderedHeadings = useMemo(() => {
+    const ideaPosition = new Map(
+      importantIdeas.map((idea, index) => [idea.id, index]),
+    )
+
+    return [...headings].sort((a, b) => {
+      const aPosition =
+        a.afterIdeaId === null ? -1 : ideaPosition.get(a.afterIdeaId) ?? 999
+      const bPosition =
+        b.afterIdeaId === null ? -1 : ideaPosition.get(b.afterIdeaId) ?? 999
+      return aPosition - bPosition
+    })
+  }, [headings, importantIdeas])
 
   function addIdea(event: FormEvent) {
     event.preventDefault()
@@ -182,6 +206,9 @@ function App() {
   function deleteIdea(id: string) {
     setIdeas((current) => current.filter((idea) => idea.id !== id))
     setConnectOrder((current) => current.filter((currentId) => currentId !== id))
+    setHeadings((current) =>
+      current.filter((heading) => heading.afterIdeaId !== id),
+    )
     if (editingIdeaId === id) {
       setEditingIdeaId(null)
       setEditingDraft('')
@@ -212,6 +239,9 @@ function App() {
         ),
       )
       setConnectOrder((current) => current.filter((currentId) => currentId !== id))
+      setHeadings((current) =>
+        current.filter((heading) => heading.afterIdeaId !== id),
+      )
       return
     }
 
@@ -241,13 +271,46 @@ function App() {
     })
   }
 
-  function changeIdeaBarColor(id: string, color: string) {
-    setIdeas((current) =>
-      current.map((idea) =>
-        idea.id === id ? { ...idea, barColor: color } : idea,
-      ),
-    )
-    setColorMenuIdeaId(null)
+  function headingForIdea(ideaId: string) {
+    const ideaIndex = importantIdeas.findIndex((idea) => idea.id === ideaId)
+    if (ideaIndex === -1) return undefined
+
+    return orderedHeadings
+      .filter((heading) => {
+        if (heading.afterIdeaId === null) return true
+        const headingIndex = importantIdeas.findIndex(
+          (idea) => idea.id === heading.afterIdeaId,
+        )
+        return headingIndex < ideaIndex
+      })
+      .at(-1)
+  }
+
+  function addHeading(event: FormEvent) {
+    event.preventDefault()
+    const title = headingTitle.trim()
+    if (!title) return
+
+    const afterIdeaId = headingTarget ?? null
+    if (headings.some((heading) => heading.afterIdeaId === afterIdeaId)) {
+      setHeadingTarget(undefined)
+      setHeadingTitle('')
+      setHeadingColor(headingColors[0])
+      return
+    }
+
+    setHeadings((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        title,
+        color: headingColor,
+        afterIdeaId,
+      },
+    ])
+    setHeadingTarget(undefined)
+    setHeadingTitle('')
+    setHeadingColor(headingColors[0])
   }
 
   function saveTitle() {
@@ -300,12 +363,12 @@ function App() {
             />
           ) : (
             <ConnectTab
+              headingForIdea={headingForIdea}
+              headings={orderedHeadings}
               ideas={importantIdeas}
               onEditIdea={startEditIdea}
               onMoveIdea={moveConnectIdea}
-              onToggleColorMenu={(id) =>
-                setColorMenuIdeaId((current) => (current === id ? null : id))
-              }
+              onOpenHeading={(afterIdeaId) => setHeadingTarget(afterIdeaId)}
               onReturnIdea={toggleImportant}
               onStartReorder={setReorderingIdeaId}
               onStopReorder={() => setReorderingIdeaId(null)}
@@ -314,19 +377,40 @@ function App() {
           )}
         </div>
 
-        {tab === 'connect' && colorMenuIdea ? (
-          <div className="bar-color-panel" aria-label="バーの色">
-            {barColors.map((color) => (
+        {headingTarget !== undefined ? (
+          <form className="heading-composer" onSubmit={addHeading}>
+            <input
+              autoFocus
+              onChange={(event) => setHeadingTitle(event.target.value)}
+              placeholder="見出し"
+              value={headingTitle}
+            />
+            <div className="heading-color-row" aria-label="見出しの色">
+              {headingColors.map((color) => (
+                <button
+                  aria-label={`見出し色 ${color}`}
+                  className={headingColor === color ? 'selected' : ''}
+                  key={color}
+                  onClick={() => setHeadingColor(color)}
+                  style={{ background: color }}
+                  type="button"
+                />
+              ))}
+            </div>
+            <div className="heading-actions">
               <button
-                aria-label={`バー色 ${color}`}
-                className={(colorMenuIdea.barColor ?? '#000002') === color ? 'selected' : ''}
-                key={color}
-                onClick={() => changeIdeaBarColor(colorMenuIdea.id, color)}
-                style={{ background: color }}
+                onClick={() => {
+                  setHeadingTarget(undefined)
+                  setHeadingTitle('')
+                  setHeadingColor(headingColors[0])
+                }}
                 type="button"
-              />
-            ))}
-          </div>
+              >
+                閉じる
+              </button>
+              <button type="submit">追加</button>
+            </div>
+          </form>
         ) : null}
 
         {addingIdea ? (
@@ -578,15 +662,19 @@ function IdeaImage({ idea }: { idea: Idea }) {
 }
 
 function ConnectTab({
+  headingForIdea,
+  headings,
   ideas,
   onEditIdea,
   onMoveIdea,
-  onToggleColorMenu,
+  onOpenHeading,
   onReturnIdea,
   onStartReorder,
   onStopReorder,
   reorderingIdeaId,
 }: {
+  headingForIdea: (id: string) => Heading | undefined
+  headings: Heading[]
   ideas: Idea[]
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (
@@ -594,41 +682,70 @@ function ConnectTab({
     targetId: string,
     position: 'before' | 'after',
   ) => void
-  onToggleColorMenu: (id: string) => void
+  onOpenHeading: (afterIdeaId: string | null) => void
   onReturnIdea: (id: string) => void
   onStartReorder: (id: string) => void
   onStopReorder: () => void
   reorderingIdeaId: string | null
 }) {
+  const headingByGap = new Map(
+    headings.map((heading) => [heading.afterIdeaId, heading]),
+  )
+
   return (
     <div className="connect-list">
-      {ideas.map((idea) => (
-        <ConnectSwipeCard
-          idea={idea}
-          key={idea.id}
-          onEdit={() => onEditIdea(idea)}
-          onMoveIdea={onMoveIdea}
-          onSwipeLeft={() => onReturnIdea(idea.id)}
-          onStartReorder={() => onStartReorder(idea.id)}
-          onStopReorder={onStopReorder}
-          onToggleColorMenu={() => onToggleColorMenu(idea.id)}
-          reorderingIdeaId={reorderingIdeaId}
-        />
-      ))}
+      {ideas.map((idea, index) => {
+        const gapId = index === 0 ? null : ideas[index - 1].id
+        const heading = headingByGap.get(gapId)
+        const activeHeading = headingForIdea(idea.id)
+
+        return (
+          <div className="connect-block" key={idea.id}>
+            {heading ? (
+              <div
+                className="heading-label"
+                style={{ background: heading.color }}
+              >
+                {heading.title}
+              </div>
+            ) : (
+              <button
+                aria-label="見出しを追加"
+                className="insert-heading-button"
+                onClick={() => onOpenHeading(gapId)}
+                type="button"
+              >
+                +
+              </button>
+            )}
+            <ConnectSwipeCard
+              barColor={activeHeading?.color ?? '#000002'}
+              idea={idea}
+              onEdit={() => onEditIdea(idea)}
+              onMoveIdea={onMoveIdea}
+              onSwipeLeft={() => onReturnIdea(idea.id)}
+              onStartReorder={() => onStartReorder(idea.id)}
+              onStopReorder={onStopReorder}
+              reorderingIdeaId={reorderingIdeaId}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 function ConnectSwipeCard({
+  barColor,
   idea,
   onEdit,
   onMoveIdea,
   onSwipeLeft,
   onStartReorder,
   onStopReorder,
-  onToggleColorMenu,
   reorderingIdeaId,
 }: {
+  barColor: string
   idea: Idea
   onEdit: () => void
   onMoveIdea: (
@@ -639,7 +756,6 @@ function ConnectSwipeCard({
   onSwipeLeft: () => void
   onStartReorder: () => void
   onStopReorder: () => void
-  onToggleColorMenu: () => void
   reorderingIdeaId: string | null
 }) {
   const [startX, setStartX] = useState(0)
@@ -722,18 +838,10 @@ function ConnectSwipeCard({
       onPointerUp={onPointerUp}
       style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
     >
-      <button
-        aria-label="バーの色を変更"
+      <span
+        aria-hidden="true"
         className="connect-color-bar"
-        onClick={(event) => {
-          event.stopPropagation()
-          onToggleColorMenu()
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-        onPointerMove={(event) => event.stopPropagation()}
-        onPointerUp={(event) => event.stopPropagation()}
-        style={{ background: idea.barColor ?? '#000002' }}
-        type="button"
+        style={{ background: barColor }}
       />
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />

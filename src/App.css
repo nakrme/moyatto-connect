@@ -55,6 +55,16 @@
   gap: 11px;
 }
 
+.connect-list {
+  gap: 0;
+}
+
+.connect-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .idea-card {
   position: relative;
   min-height: 62px;
@@ -138,32 +148,30 @@
   touch-action: none;
 }
 
-.bar-color-panel {
-  position: absolute;
-  left: 31px;
-  right: 31px;
-  bottom: 166px;
-  z-index: 7;
-  display: grid;
-  grid-template-columns: repeat(5, 34px);
-  gap: 9px;
-  justify-content: start;
-  padding: 10px;
-  background: #fff;
-  border: 1px solid #6f7478;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16);
+.heading-label {
+  align-self: flex-start;
+  min-width: 46px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
 }
 
-.bar-color-panel button {
+.insert-heading-button {
+  align-self: center;
   width: 34px;
-  height: 34px;
-  border: 2px solid transparent;
-  border-radius: 0;
-  padding: 0;
-}
-
-.bar-color-panel button.selected {
-  border-color: #000002;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  color: #5e5e64;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .drag-handle {
@@ -218,6 +226,72 @@
   font-size: 13px;
   line-height: 1.7;
   text-align: left;
+}
+
+.heading-composer {
+  position: absolute;
+  left: 31px;
+  right: 31px;
+  bottom: 88px;
+  z-index: 7;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #6f7478;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16);
+}
+
+.heading-composer input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e1e4e5;
+  border-radius: 0;
+  color: #000002;
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.heading-color-row {
+  display: grid;
+  grid-template-columns: repeat(5, 34px);
+  gap: 8px;
+}
+
+.heading-color-row button {
+  width: 34px;
+  height: 34px;
+  border: 3px solid transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.heading-color-row button.selected {
+  border-color: #000002;
+}
+
+.heading-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.heading-actions button {
+  min-width: 64px;
+  height: 34px;
+  border: 0;
+  background: #efefef;
+  color: #333;
+  font-weight: 800;
+}
+
+.heading-actions button[type='submit'] {
+  background: #000002;
+  color: #fff;
 }
 
 .fab {
