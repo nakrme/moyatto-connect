@@ -33,13 +33,16 @@ type FlyingIdea = {
 const STORAGE_KEY = 'moyatto-connect-v1'
 
 const colors = [
-  { name: 'pink 1', value: '#f31059' },
-  { name: 'pink 2', value: '#f31059' },
-  { name: 'pink 3', value: '#f31059' },
-  { name: 'pink 4', value: '#f31059' },
-  { name: 'pink 5', value: '#f31059' },
-  { name: 'pink 6', value: '#f31059' },
+  { name: 'black', value: '#000002' },
+  { name: 'plum', value: '#ba3264' },
+  { name: 'hot pink', value: '#f31059' },
+  { name: 'sage', value: '#9faca2' },
+  { name: 'lime', value: '#89db3b' },
+  { name: 'blue', value: '#209bfc' },
   { name: 'pale pink', value: '#e4b1b4' },
+  { name: 'olive', value: '#cfd72d' },
+  { name: 'mint', value: '#9bf3ae' },
+  { name: 'yellow', value: '#fff332' },
 ]
 
 const starterIdeas: Idea[] = []
