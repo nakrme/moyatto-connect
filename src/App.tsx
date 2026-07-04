@@ -222,14 +222,18 @@ function App() {
     )
   }
 
-  function moveConnectIdea(sourceId: string, targetId: string) {
+  function moveConnectIdea(
+    sourceId: string,
+    targetId: string,
+    position: 'before' | 'after',
+  ) {
     if (sourceId === targetId) return
 
     setConnectOrder((current) => {
       const next = current.filter((id) => id !== sourceId)
       const targetIndex = next.indexOf(targetId)
       if (targetIndex === -1) return current
-      next.splice(targetIndex, 0, sourceId)
+      next.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, sourceId)
       return next
     })
   }
@@ -569,7 +573,11 @@ function ConnectTab({
   flyingIdea: FlyingIdea
   ideas: Idea[]
   onEditIdea: (idea: Idea) => void
-  onMoveIdea: (sourceId: string, targetId: string) => void
+  onMoveIdea: (
+    sourceId: string,
+    targetId: string,
+    position: 'before' | 'after',
+  ) => void
   onReturnIdea: (id: string) => void
   onStartReorder: (id: string) => void
   onStopReorder: () => void
@@ -609,7 +617,11 @@ function ConnectSwipeCard({
   flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
   onEdit: () => void
-  onMoveIdea: (sourceId: string, targetId: string) => void
+  onMoveIdea: (
+    sourceId: string,
+    targetId: string,
+    position: 'before' | 'after',
+  ) => void
   onSwipeLeft: () => void
   onStartReorder: () => void
   onStopReorder: () => void
@@ -664,13 +676,18 @@ function ConnectSwipeCard({
     event.stopPropagation()
     if (!isDragging.current) return
 
-    const target = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest('[data-connect-idea-id]')
-    const targetId = target?.getAttribute('data-connect-idea-id')
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-connect-idea-id]'),
+    ).filter((card) => card.dataset.connectIdeaId !== idea.id)
+    const beforeCard = cards.find((card) => {
+      const rect = card.getBoundingClientRect()
+      return event.clientY < rect.top + rect.height / 2
+    })
+    const targetCard = beforeCard ?? cards.at(-1)
+    const targetId = targetCard?.dataset.connectIdeaId
 
-    if (targetId && targetId !== idea.id) {
-      onMoveIdea(idea.id, targetId)
+    if (targetId) {
+      onMoveIdea(idea.id, targetId, beforeCard ? 'before' : 'after')
     }
     isDragging.current = false
     onStopReorder()
