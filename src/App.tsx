@@ -109,6 +109,9 @@ function App() {
       .map((id) => ideas.find((idea) => idea.id === id))
       .filter(Boolean) as Idea[]
   }, [connectOrder, ideas])
+  const colorMenuIdea = colorMenuIdeaId
+    ? ideas.find((idea) => idea.id === colorMenuIdeaId)
+    : undefined
 
   function addIdea(event: FormEvent) {
     event.preventDefault()
@@ -297,9 +300,7 @@ function App() {
             />
           ) : (
             <ConnectTab
-              colorMenuIdeaId={colorMenuIdeaId}
               ideas={importantIdeas}
-              onChangeBarColor={changeIdeaBarColor}
               onEditIdea={startEditIdea}
               onMoveIdea={moveConnectIdea}
               onToggleColorMenu={(id) =>
@@ -312,6 +313,21 @@ function App() {
             />
           )}
         </div>
+
+        {tab === 'connect' && colorMenuIdea ? (
+          <div className="bar-color-panel" aria-label="バーの色">
+            {barColors.map((color) => (
+              <button
+                aria-label={`バー色 ${color}`}
+                className={(colorMenuIdea.barColor ?? '#000002') === color ? 'selected' : ''}
+                key={color}
+                onClick={() => changeIdeaBarColor(colorMenuIdea.id, color)}
+                style={{ background: color }}
+                type="button"
+              />
+            ))}
+          </div>
+        ) : null}
 
         {addingIdea ? (
           <form className="idea-composer-screen" onSubmit={addIdea}>
@@ -562,9 +578,7 @@ function IdeaImage({ idea }: { idea: Idea }) {
 }
 
 function ConnectTab({
-  colorMenuIdeaId,
   ideas,
-  onChangeBarColor,
   onEditIdea,
   onMoveIdea,
   onToggleColorMenu,
@@ -573,9 +587,7 @@ function ConnectTab({
   onStopReorder,
   reorderingIdeaId,
 }: {
-  colorMenuIdeaId: string | null
   ideas: Idea[]
-  onChangeBarColor: (id: string, color: string) => void
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (
     sourceId: string,
@@ -592,10 +604,8 @@ function ConnectTab({
     <div className="connect-list">
       {ideas.map((idea) => (
         <ConnectSwipeCard
-          colorMenuOpen={colorMenuIdeaId === idea.id}
           idea={idea}
           key={idea.id}
-          onChangeBarColor={(color) => onChangeBarColor(idea.id, color)}
           onEdit={() => onEditIdea(idea)}
           onMoveIdea={onMoveIdea}
           onSwipeLeft={() => onReturnIdea(idea.id)}
@@ -610,9 +620,7 @@ function ConnectTab({
 }
 
 function ConnectSwipeCard({
-  colorMenuOpen,
   idea,
-  onChangeBarColor,
   onEdit,
   onMoveIdea,
   onSwipeLeft,
@@ -621,9 +629,7 @@ function ConnectSwipeCard({
   onToggleColorMenu,
   reorderingIdeaId,
 }: {
-  colorMenuOpen: boolean
   idea: Idea
-  onChangeBarColor: (color: string) => void
   onEdit: () => void
   onMoveIdea: (
     sourceId: string,
@@ -709,7 +715,7 @@ function ConnectSwipeCard({
 
   return (
     <article
-      className={`idea-card connect-card ${colorMenuOpen ? 'color-menu-open' : ''} ${isThisReordering ? 'reordering' : ''}`}
+      className={`idea-card connect-card ${isThisReordering ? 'reordering' : ''}`}
       data-connect-idea-id={idea.id}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -729,25 +735,6 @@ function ConnectSwipeCard({
         style={{ background: idea.barColor ?? '#000002' }}
         type="button"
       />
-      {colorMenuOpen ? (
-        <div
-          className="bar-color-menu"
-          onPointerDown={(event) => event.stopPropagation()}
-          onPointerMove={(event) => event.stopPropagation()}
-          onPointerUp={(event) => event.stopPropagation()}
-        >
-          {barColors.map((color) => (
-            <button
-              aria-label={`バー色 ${color}`}
-              className={(idea.barColor ?? '#000002') === color ? 'selected' : ''}
-              key={color}
-              onClick={() => onChangeBarColor(color)}
-              style={{ background: color }}
-              type="button"
-            />
-          ))}
-        </div>
-      ) : null}
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />
       <button

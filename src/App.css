@@ -120,10 +120,6 @@
   padding-left: 38px;
 }
 
-.connect-card.color-menu-open {
-  z-index: 100;
-}
-
 .connect-card.reordering {
   z-index: 3;
   opacity: 0.92;
@@ -142,29 +138,31 @@
   touch-action: none;
 }
 
-.bar-color-menu {
+.bar-color-panel {
   position: absolute;
-  left: 24px;
-  top: 8px;
-  z-index: 120;
+  left: 31px;
+  right: 31px;
+  bottom: 166px;
+  z-index: 7;
   display: grid;
-  grid-template-columns: repeat(5, 24px);
-  gap: 7px;
-  padding: 8px;
+  grid-template-columns: repeat(5, 34px);
+  gap: 9px;
+  justify-content: start;
+  padding: 10px;
   background: #fff;
   border: 1px solid #6f7478;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16);
 }
 
-.bar-color-menu button {
-  width: 24px;
-  height: 24px;
+.bar-color-panel button {
+  width: 34px;
+  height: 34px;
   border: 2px solid transparent;
   border-radius: 0;
   padding: 0;
 }
 
-.bar-color-menu button.selected {
+.bar-color-panel button.selected {
   border-color: #000002;
 }
 
