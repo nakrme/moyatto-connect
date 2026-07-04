@@ -454,8 +454,10 @@
 }
 
 .color-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, 34px);
   gap: 8px;
+  justify-content: start;
 }
 
 .color-row button {
