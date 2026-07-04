@@ -411,17 +411,19 @@ function App() {
                 OK
               </button>
             </div>
-            <textarea
-              autoFocus
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="思いついたことをなんでも書いてみよう"
-            />
-            {draftImageUrl ? (
-              <div className="composer-image-preview">
-                <img src={draftImageUrl} alt="" />
-              </div>
-            ) : null}
+            <div className="idea-composer-body">
+              <textarea
+                autoFocus
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="思いついたことをなんでも書いてみよう"
+              />
+              {draftImageUrl ? (
+                <div className="composer-image-preview">
+                  <img src={draftImageUrl} alt="" />
+                </div>
+              ) : null}
+            </div>
             <input
               accept="image/*"
               capture="environment"

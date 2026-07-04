@@ -299,7 +299,8 @@
   position: absolute;
   inset: 0;
   z-index: 8;
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   color: #60666a;
   border: 0;
@@ -307,11 +308,18 @@
 }
 
 .idea-composer-top {
+  flex: 0 0 auto;
   height: 72px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   padding: 24px 18px 0 12px;
+}
+
+.idea-composer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .composer-close {
@@ -391,10 +399,7 @@
 }
 
 .composer-tool-row {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 497px;
+  flex: 0 0 auto;
   display: flex;
   gap: 18px;
   align-items: center;
