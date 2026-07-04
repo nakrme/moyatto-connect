@@ -9,18 +9,10 @@
   position: relative;
   width: min(100vw, 402px);
   min-height: 100svh;
-  background: #fbfbfb;
+  background: #f3f7f8;
   color: #6f6f76;
   overflow: hidden;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.08);
-}
-
-.phone-frame.idea-screen {
-  background: #f3f7f8;
-}
-
-.phone-frame.connect-screen {
-  background: #fbfbfb;
 }
 
 .app-header {
