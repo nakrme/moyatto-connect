@@ -69,6 +69,7 @@ function App() {
   const [stickyTitle, setStickyTitle] = useState('')
   const [stickyColor, setStickyColor] = useState(colors[0].value)
   const [dragItem, setDragItem] = useState<DragItem>(null)
+  const [flyingIdeaId, setFlyingIdeaId] = useState<string | null>(null)
 
   useEffect(() => {
     localStorage.setItem(
@@ -163,6 +164,24 @@ function App() {
   }
 
   function toggleImportant(id: string) {
+    const idea = ideas.find((currentIdea) => currentIdea.id === id)
+    if (idea && !idea.important) {
+      setFlyingIdeaId(id)
+      window.setTimeout(() => {
+        setIdeas((current) =>
+          current.map((currentIdea) =>
+            currentIdea.id === id ? { ...currentIdea, important: true } : currentIdea,
+          ),
+        )
+        setConnectOrder((current) =>
+          current.includes(id) ? current : [...current, id],
+        )
+        setFlyingIdeaId(null)
+        setTab('connect')
+      }, 360)
+      return
+    }
+
     setIdeas((current) =>
       current.map((idea) =>
         idea.id === id ? { ...idea, important: !idea.important } : idea,
@@ -309,6 +328,7 @@ function App() {
         <div className="content">
           {tab === 'idea' ? (
             <IdeaTab
+              flyingIdeaId={flyingIdeaId}
               ideas={ideas}
               onEditIdea={startEditIdea}
               onToggleImportant={toggleImportant}
@@ -431,10 +451,12 @@ function App() {
 }
 
 function IdeaTab({
+  flyingIdeaId,
   ideas,
   onEditIdea,
   onToggleImportant,
 }: {
+  flyingIdeaId: string | null
   ideas: Idea[]
   onEditIdea: (idea: Idea) => void
   onToggleImportant: (id: string) => void
@@ -443,6 +465,7 @@ function IdeaTab({
     <div className="idea-list">
       {ideas.map((idea) => (
         <SwipeCard
+          isFlying={flyingIdeaId === idea.id}
           idea={idea}
           key={idea.id}
           onEdit={() => onEditIdea(idea)}
@@ -454,10 +477,12 @@ function IdeaTab({
 }
 
 function SwipeCard({
+  isFlying,
   idea,
   onEdit,
   onSwipe,
 }: {
+  isFlying: boolean
   idea: Idea
   onEdit: () => void
   onSwipe: () => void
@@ -466,16 +491,19 @@ function SwipeCard({
   const [offsetX, setOffsetX] = useState(0)
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
+    if (isFlying) return
     setStartX(event.clientX)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
+    if (isFlying) return
     if (!startX) return
     setOffsetX(Math.max(0, Math.min(86, event.clientX - startX)))
   }
 
   function onPointerUp() {
+    if (isFlying) return
     if (offsetX > 54) onSwipe()
     if (offsetX < 8) onEdit()
     setStartX(0)
@@ -484,7 +512,7 @@ function SwipeCard({
 
   return (
     <article
-      className={`idea-card ${idea.important ? 'important' : ''}`}
+      className={`idea-card ${idea.important ? 'important' : ''} ${isFlying ? 'flying-to-connect' : ''}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
