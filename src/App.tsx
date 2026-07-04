@@ -282,7 +282,7 @@ function App() {
       })
       .at(-1)
 
-    return activeSticky?.color ?? '#111'
+    return activeSticky?.color ?? '#000002'
   }
 
   function saveTitle() {
