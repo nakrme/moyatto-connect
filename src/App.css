@@ -15,6 +15,14 @@
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.08);
 }
 
+.phone-frame.idea-screen {
+  background: #f3f7f8;
+}
+
+.phone-frame.connect-screen {
+  background: #fbfbfb;
+}
+
 .app-header {
   padding: 46px 31px 20px;
 }
@@ -59,12 +67,12 @@
   position: relative;
   min-height: 62px;
   background: #fff;
-  border: 1px solid #f1f1f1;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.02);
+  border: 1px solid #6f7478;
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 15px 20px 15px 28px;
+  padding: 15px 20px 15px 27px;
   touch-action: pan-y;
   transition:
     transform 160ms ease,
@@ -96,7 +104,7 @@
 }
 
 .idea-card:active {
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 .idea-card.flying-to-connect {
@@ -244,6 +252,10 @@
   align-items: center;
   background: #fff;
   border-top: 1px solid #eeeeee;
+}
+
+.idea-screen .tabbar {
+  border-top-color: #e5ecee;
 }
 
 .tab-indicator {

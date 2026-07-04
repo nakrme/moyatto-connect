@@ -317,7 +317,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      <section className="phone-frame" aria-label="もやっとこねくと">
+      <section className={`phone-frame ${tab}-screen`} aria-label="もやっとこねくと">
         <header className="app-header">
           {editingTitle ? (
             <form
