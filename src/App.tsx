@@ -352,7 +352,7 @@ function App() {
           {tab === 'idea' ? (
             <IdeaTab
               flyingIdea={flyingIdea}
-              ideas={ideas}
+              ideas={ideas.filter((idea) => !idea.important)}
               onEditIdea={startEditIdea}
               onToggleImportant={toggleImportant}
             />
