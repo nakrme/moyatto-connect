@@ -296,6 +296,118 @@
   transform: translateY(-1px);
 }
 
+.idea-composer-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  min-height: 100%;
+  background: #fff;
+  color: #60666a;
+  border: 0;
+  border-bottom: 1px solid #000002;
+}
+
+.idea-composer-top {
+  height: 72px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 18px 0 12px;
+}
+
+.composer-close {
+  position: relative;
+  width: 23px;
+  height: 23px;
+  border: 1px solid #000002;
+  background: transparent;
+  padding: 0;
+}
+
+.composer-close::before,
+.composer-close::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  background: #000002;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.composer-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.composer-ok {
+  min-width: 63px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #000002;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.idea-composer-screen textarea {
+  display: block;
+  width: 262px;
+  min-height: 74px;
+  margin: 36px auto 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: #60666a;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.85;
+}
+
+.idea-composer-screen textarea::placeholder {
+  color: #a0a7ab;
+}
+
+.composer-image-preview {
+  width: 262px;
+  height: 222px;
+  margin: 16px auto 0;
+  background: #d9d9d9;
+}
+
+.composer-tool-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 497px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 31px;
+  border-top: 1px solid #000002;
+}
+
+.composer-tool-row button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #000002;
+  padding: 0;
+}
+
+.composer-tool-row svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.4;
+}
+
 .composer {
   position: absolute;
   left: 18px;

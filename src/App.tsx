@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, FormEvent, PointerEvent } from 'react'
+import { AiOutlinePicture } from 'react-icons/ai'
+import { CiCamera } from 'react-icons/ci'
 import './App.css'
 
 type Tab = 'idea' | 'connect'
@@ -373,18 +375,32 @@ function App() {
         </div>
 
         {addingIdea ? (
-          <form className="composer" onSubmit={addIdea}>
+          <form className="idea-composer-screen" onSubmit={addIdea}>
+            <div className="idea-composer-top">
+              <button
+                aria-label="閉じる"
+                className="composer-close"
+                type="button"
+                onClick={() => setAddingIdea(false)}
+              />
+              <button className="composer-ok" type="submit">
+                OK
+              </button>
+            </div>
             <textarea
               autoFocus
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="思いついたことを書く"
+              placeholder="もやっとしたことを書く"
             />
-            <div className="composer-actions">
-              <button type="button" onClick={() => setAddingIdea(false)}>
-                閉じる
+            <div className="composer-image-preview" aria-hidden="true" />
+            <div className="composer-tool-row" aria-label="画像追加">
+              <button aria-label="カメラ" type="button">
+                <CiCamera />
               </button>
-              <button type="submit">追加</button>
+              <button aria-label="写真" type="button">
+                <AiOutlinePicture />
+              </button>
             </div>
           </form>
         ) : null}
