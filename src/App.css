@@ -91,10 +91,6 @@
   background: #000002;
 }
 
-.connect-card::before {
-  background: var(--bar-color, #000002);
-}
-
 .idea-card:active {
   box-shadow: none;
 }
@@ -161,16 +157,6 @@
   flex: 0 0 auto;
 }
 
-.connect-list {
-  gap: 0;
-}
-
-.connect-block {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
 .connect-card {
   min-height: 60px;
   cursor: grab;
@@ -184,25 +170,6 @@
   z-index: 3;
   opacity: 0.92;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-}
-
-.sticky-label {
-  align-self: flex-start;
-  min-width: 40px;
-  height: 19px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 8px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
-  cursor: grab;
-}
-
-.connect-gap {
-  height: 20px;
 }
 
 .empty {
@@ -423,73 +390,3 @@
   stroke-width: 1.4;
 }
 
-.composer {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 82px;
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  background: #fff;
-  border: 1px solid #ececec;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-  z-index: 4;
-}
-
-.composer textarea,
-.composer input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #e8e8e8;
-  border-radius: 0;
-  color: #303036;
-  background: #fbfbfb;
-  font: inherit;
-  font-size: 16px;
-  line-height: 1.6;
-  padding: 10px 12px;
-  outline: none;
-}
-
-.composer textarea {
-  min-height: 96px;
-  resize: vertical;
-}
-
-.composer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.composer-actions button {
-  min-width: 64px;
-  height: 36px;
-  border: 0;
-  background: #efefef;
-  color: #333;
-  font-weight: 800;
-}
-
-.composer-actions button[type='submit'] {
-  background: #000002;
-  color: #fff;
-}
-
-.color-row {
-  display: grid;
-  grid-template-columns: repeat(5, 34px);
-  gap: 8px;
-  justify-content: start;
-}
-
-.color-row button {
-  width: 34px;
-  height: 34px;
-  border: 3px solid transparent;
-}
-
-.color-row button.selected {
-  border-color: #000002;
-}

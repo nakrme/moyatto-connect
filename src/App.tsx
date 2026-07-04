@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, ChangeEvent, FormEvent, PointerEvent } from 'react'
+import type { ChangeEvent, FormEvent, PointerEvent } from 'react'
 import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
 import './App.css'
 
@@ -14,13 +14,6 @@ type Idea = {
   createdAt: number
 }
 
-type Sticky = {
-  id: string
-  title: string
-  color: string
-  afterIdeaId: string | null
-}
-
 type FlyingIdea = {
   id: string
   direction: 'to-connect' | 'to-idea'
@@ -28,22 +21,7 @@ type FlyingIdea = {
 
 const STORAGE_KEY = 'moyatto-connect-v1'
 
-const colors = [
-  { name: 'black', value: '#000002' },
-  { name: 'plum', value: '#ba3264' },
-  { name: 'hot pink', value: '#f31059' },
-  { name: 'sage', value: '#9faca2' },
-  { name: 'lime', value: '#89db3b' },
-  { name: 'blue', value: '#209bfc' },
-  { name: 'pale pink', value: '#e4b1b4' },
-  { name: 'olive', value: '#cfd72d' },
-  { name: 'mint', value: '#9bf3ae' },
-  { name: 'yellow', value: '#fff332' },
-]
-
 const starterIdeas: Idea[] = []
-
-const starterStickies: Sticky[] = []
 
 function savedData() {
   const saved = localStorage.getItem(STORAGE_KEY)
@@ -65,18 +43,11 @@ function App() {
       ? saved.connectOrder
       : starterIdeas.filter((idea) => idea.important).map((idea) => idea.id)
   })
-  const [stickies, setStickies] = useState<Sticky[]>(() => {
-    const saved = savedData()
-    return saved?.stickies ?? starterStickies
-  })
   const [draft, setDraft] = useState('')
   const [addingIdea, setAddingIdea] = useState(false)
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState('')
   const [editingImageUrl, setEditingImageUrl] = useState('')
-  const [stickyTarget, setStickyTarget] = useState<string | null | undefined>()
-  const [stickyTitle, setStickyTitle] = useState('')
-  const [stickyColor, setStickyColor] = useState(colors[0].value)
   const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
   const [draftImageUrl, setDraftImageUrl] = useState('')
@@ -108,17 +79,16 @@ function App() {
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ appTitle, ideas, connectOrder, stickies }),
+      JSON.stringify({ appTitle, ideas, connectOrder }),
     )
-  }, [appTitle, ideas, connectOrder, stickies])
+  }, [appTitle, ideas, connectOrder])
 
   useEffect(() => {
     if (ideas.some((idea) => idea.important)) return
-    if (connectOrder.length === 0 && stickies.length === 0) return
+    if (connectOrder.length === 0) return
 
     setConnectOrder([])
-    setStickies([])
-  }, [connectOrder.length, ideas, stickies.length])
+  }, [connectOrder.length, ideas])
 
   const importantIdeas = useMemo(() => {
     const currentIds = ideas
@@ -131,20 +101,6 @@ function App() {
       .map((id) => ideas.find((idea) => idea.id === id))
       .filter(Boolean) as Idea[]
   }, [connectOrder, ideas])
-
-  const orderedStickies = useMemo(() => {
-    const ideaPosition = new Map(
-      importantIdeas.map((idea, index) => [idea.id, index]),
-    )
-
-    return [...stickies].sort((a, b) => {
-      const aPosition =
-        a.afterIdeaId === null ? -1 : ideaPosition.get(a.afterIdeaId) ?? 999
-      const bPosition =
-        b.afterIdeaId === null ? -1 : ideaPosition.get(b.afterIdeaId) ?? 999
-      return aPosition - bPosition
-    })
-  }, [importantIdeas, stickies])
 
   function addIdea(event: FormEvent) {
     event.preventDefault()
@@ -190,7 +146,6 @@ function App() {
 
   function startEditIdea(idea: Idea) {
     setAddingIdea(false)
-    setStickyTarget(undefined)
     setEditingIdeaId(idea.id)
     setEditingDraft(idea.text)
     setEditingImageUrl(idea.imageUrl ?? '')
@@ -216,9 +171,6 @@ function App() {
   function deleteIdea(id: string) {
     setIdeas((current) => current.filter((idea) => idea.id !== id))
     setConnectOrder((current) => current.filter((currentId) => currentId !== id))
-    setStickies((current) =>
-      current.filter((sticky) => sticky.afterIdeaId !== id),
-    )
     if (editingIdeaId === id) {
       setEditingIdeaId(null)
       setEditingDraft('')
@@ -245,17 +197,6 @@ function App() {
     }
 
     if (idea?.important) {
-      const ideaIndex = importantIdeas.findIndex((importantIdea) => importantIdea.id === id)
-      const activeSticky = orderedStickies
-        .filter((sticky) => {
-          if (sticky.afterIdeaId === null) return true
-          const stickyIndex = importantIdeas.findIndex(
-            (importantIdea) => importantIdea.id === sticky.afterIdeaId,
-          )
-          return stickyIndex < ideaIndex
-        })
-        .at(-1)
-
       setFlyingIdea({ id, direction: 'to-idea' })
       window.setTimeout(() => {
         setIdeas((current) =>
@@ -266,12 +207,6 @@ function App() {
           ),
         )
         setConnectOrder((current) => current.filter((currentId) => currentId !== id))
-        setStickies((current) =>
-          current.filter(
-            (sticky) =>
-              sticky.afterIdeaId !== id && sticky.id !== activeSticky?.id,
-          ),
-        )
         setFlyingIdea(null)
       }, 360)
       return
@@ -287,26 +222,8 @@ function App() {
     )
   }
 
-  function stickyForIdea(ideaId: string) {
-    const ideaIndex = importantIdeas.findIndex((importantIdea) => importantIdea.id === ideaId)
-    if (ideaIndex === -1) return undefined
-
-    return orderedStickies
-      .filter((sticky) => {
-        if (sticky.afterIdeaId === null) return true
-        const stickyIndex = importantIdeas.findIndex(
-          (importantIdea) => importantIdea.id === sticky.afterIdeaId,
-        )
-        return stickyIndex < ideaIndex
-      })
-      .at(-1)
-  }
-
   function moveConnectIdea(sourceId: string, targetId: string) {
     if (sourceId === targetId) return
-
-    const sourceSticky = stickyForIdea(sourceId)
-    const destinationSticky = stickyForIdea(targetId)
 
     setConnectOrder((current) => {
       const next = current.filter((id) => id !== sourceId)
@@ -315,53 +232,6 @@ function App() {
       next.splice(targetIndex, 0, sourceId)
       return next
     })
-
-    if (sourceSticky && sourceSticky.id !== destinationSticky?.id) {
-      setStickies((current) =>
-        current.filter((sticky) => sticky.id !== sourceSticky.id),
-      )
-    }
-  }
-
-  function addSticky(event: FormEvent) {
-    event.preventDefault()
-    const title = stickyTitle.trim()
-    if (!title) return
-    const afterIdeaId = stickyTarget ?? null
-    if (stickies.some((sticky) => sticky.afterIdeaId === afterIdeaId)) {
-      setStickyTitle('')
-      setStickyColor(colors[0].value)
-      setStickyTarget(undefined)
-      return
-    }
-
-    setStickies((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        title,
-        color: stickyColor,
-        afterIdeaId,
-      },
-    ])
-    setStickyTitle('')
-    setStickyColor(colors[0].value)
-    setStickyTarget(undefined)
-  }
-
-  function colorForIdea(ideaId: string) {
-    const ideaIndex = importantIdeas.findIndex((idea) => idea.id === ideaId)
-    const activeSticky = orderedStickies
-      .filter((sticky) => {
-        if (sticky.afterIdeaId === null) return true
-        const stickyIndex = importantIdeas.findIndex(
-          (idea) => idea.id === sticky.afterIdeaId,
-        )
-        return stickyIndex < ideaIndex
-      })
-      .at(-1)
-
-    return activeSticky?.color ?? '#000002'
   }
 
   function saveTitle() {
@@ -416,11 +286,8 @@ function App() {
           ) : (
             <ConnectTab
               ideas={importantIdeas}
-              stickies={orderedStickies}
-              colorForIdea={colorForIdea}
               onEditIdea={startEditIdea}
               onMoveIdea={moveConnectIdea}
-              onOpenSticky={(afterIdeaId) => setStickyTarget(afterIdeaId)}
               onReturnIdea={toggleImportant}
               onStartReorder={setReorderingIdeaId}
               onStopReorder={() => setReorderingIdeaId(null)}
@@ -562,35 +429,6 @@ function App() {
           </form>
         ) : null}
 
-        {stickyTarget !== undefined ? (
-          <form className="composer sticky-composer" onSubmit={addSticky}>
-            <input
-              autoFocus
-              value={stickyTitle}
-              onChange={(event) => setStickyTitle(event.target.value)}
-              placeholder="付箋タイトル"
-            />
-            <div className="color-row" aria-label="付箋の色">
-              {colors.map((color) => (
-                <button
-                  aria-label={color.name}
-                  className={stickyColor === color.value ? 'selected' : ''}
-                  key={color.name}
-                  onClick={() => setStickyColor(color.value)}
-                  style={{ background: color.value }}
-                  type="button"
-                />
-              ))}
-            </div>
-            <div className="composer-actions">
-              <button type="button" onClick={() => setStickyTarget(undefined)}>
-                閉じる
-              </button>
-              <button type="submit">挿入</button>
-            </div>
-          </form>
-        ) : null}
-
         <button
           aria-label="アイディアを追加"
           className="fab"
@@ -721,11 +559,8 @@ function IdeaImage({ idea }: { idea: Idea }) {
 function ConnectTab({
   flyingIdea,
   ideas,
-  stickies,
-  colorForIdea,
   onEditIdea,
   onMoveIdea,
-  onOpenSticky,
   onReturnIdea,
   onStartReorder,
   onStopReorder,
@@ -733,86 +568,52 @@ function ConnectTab({
 }: {
   flyingIdea: FlyingIdea
   ideas: Idea[]
-  stickies: Sticky[]
-  colorForIdea: (id: string) => string
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (sourceId: string, targetId: string) => void
-  onOpenSticky: (afterIdeaId: string | null) => void
   onReturnIdea: (id: string) => void
   onStartReorder: (id: string) => void
   onStopReorder: () => void
   reorderingIdeaId: string | null
 }) {
-  if (ideas.length === 0) {
-    return <div className="connect-list" />
-  }
-
-  const stickyByGap = new Map(
-    stickies.map((sticky) => [sticky.afterIdeaId, sticky]),
-  )
-
   return (
     <div className="connect-list">
-      {ideas.map((idea, index) => {
-        const gapId = index === 0 ? null : ideas[index - 1].id
-        const stickyBeforeIdea = stickyByGap.get(gapId)
-
-        return (
-          <div className="connect-block" key={idea.id}>
-            {stickyBeforeIdea ? (
-              <StickyLabel sticky={stickyBeforeIdea} />
-            ) : (
-              <div className="connect-gap" />
-            )}
-            <ConnectSwipeCard
-              canInsertSticky={!stickyBeforeIdea}
-              flyDirection={
-                flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
-              }
-              gapId={gapId}
-              idea={idea}
-              onEdit={() => onEditIdea(idea)}
-              onMoveIdea={onMoveIdea}
-              onOpenSticky={onOpenSticky}
-              onSwipeLeft={() => onReturnIdea(idea.id)}
-              onStartReorder={() => onStartReorder(idea.id)}
-              onStopReorder={onStopReorder}
-              reorderingIdeaId={reorderingIdeaId}
-              style={{ '--bar-color': colorForIdea(idea.id) } as CSSProperties}
-            />
-          </div>
-        )
-      })}
+      {ideas.map((idea) => (
+        <ConnectSwipeCard
+          flyDirection={
+            flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
+          }
+          idea={idea}
+          key={idea.id}
+          onEdit={() => onEditIdea(idea)}
+          onMoveIdea={onMoveIdea}
+          onSwipeLeft={() => onReturnIdea(idea.id)}
+          onStartReorder={() => onStartReorder(idea.id)}
+          onStopReorder={onStopReorder}
+          reorderingIdeaId={reorderingIdeaId}
+        />
+      ))}
     </div>
   )
 }
 
 function ConnectSwipeCard({
-  canInsertSticky,
   flyDirection,
-  gapId,
   idea,
   onEdit,
   onMoveIdea,
-  onOpenSticky,
   onSwipeLeft,
   onStartReorder,
   onStopReorder,
   reorderingIdeaId,
-  style,
 }: {
-  canInsertSticky: boolean
   flyDirection?: 'to-connect' | 'to-idea'
-  gapId: string | null
   idea: Idea
   onEdit: () => void
   onMoveIdea: (sourceId: string, targetId: string) => void
-  onOpenSticky: (afterIdeaId: string | null) => void
   onSwipeLeft: () => void
   onStartReorder: () => void
   onStopReorder: () => void
   reorderingIdeaId: string | null
-  style: CSSProperties
 }) {
   const [startX, setStartX] = useState(0)
   const [startY, setStartY] = useState(0)
@@ -874,8 +675,6 @@ function ConnectSwipeCard({
 
       if (targetId && targetId !== idea.id) {
         onMoveIdea(idea.id, targetId)
-      } else if (canInsertSticky) {
-        onOpenSticky(gapId)
       }
       isReordering.current = false
       onStopReorder()
@@ -901,22 +700,11 @@ function ConnectSwipeCard({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      style={{ ...style, transform: `translate(${offsetX}px, ${offsetY}px)` }}
+      style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
     >
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />
     </article>
-  )
-}
-
-function StickyLabel({ sticky }: { sticky: Sticky }) {
-  return (
-    <div
-      className="sticky-label"
-      style={{ background: sticky.color }}
-    >
-      {sticky.title}
-    </div>
   )
 }
 
