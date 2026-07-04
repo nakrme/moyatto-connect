@@ -762,21 +762,18 @@ function ConnectTab({
             {stickyBeforeIdea ? (
               <StickyLabel sticky={stickyBeforeIdea} />
             ) : (
-              <button
-                className="insert-button"
-                onClick={() => onOpenSticky(gapId)}
-                type="button"
-              >
-                +
-              </button>
+              <div className="connect-gap" />
             )}
             <ConnectSwipeCard
+              canInsertSticky={!stickyBeforeIdea}
               flyDirection={
                 flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
               }
+              gapId={gapId}
               idea={idea}
               onEdit={() => onEditIdea(idea)}
               onMoveIdea={onMoveIdea}
+              onOpenSticky={onOpenSticky}
               onSwipeLeft={() => onReturnIdea(idea.id)}
               onStartReorder={() => onStartReorder(idea.id)}
               onStopReorder={onStopReorder}
@@ -791,20 +788,26 @@ function ConnectTab({
 }
 
 function ConnectSwipeCard({
+  canInsertSticky,
   flyDirection,
+  gapId,
   idea,
   onEdit,
   onMoveIdea,
+  onOpenSticky,
   onSwipeLeft,
   onStartReorder,
   onStopReorder,
   reorderingIdeaId,
   style,
 }: {
+  canInsertSticky: boolean
   flyDirection?: 'to-connect' | 'to-idea'
+  gapId: string | null
   idea: Idea
   onEdit: () => void
   onMoveIdea: (sourceId: string, targetId: string) => void
+  onOpenSticky: (afterIdeaId: string | null) => void
   onSwipeLeft: () => void
   onStartReorder: () => void
   onStopReorder: () => void
@@ -869,8 +872,10 @@ function ConnectSwipeCard({
         ?.closest('[data-connect-idea-id]')
       const targetId = target?.getAttribute('data-connect-idea-id')
 
-      if (targetId) {
+      if (targetId && targetId !== idea.id) {
         onMoveIdea(idea.id, targetId)
+      } else if (canInsertSticky) {
+        onOpenSticky(gapId)
       }
       isReordering.current = false
       onStopReorder()

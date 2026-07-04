@@ -201,16 +201,8 @@
   cursor: grab;
 }
 
-.insert-button {
-  align-self: center;
-  width: 32px;
+.connect-gap {
   height: 20px;
-  border: 0;
-  background: transparent;
-  color: #5e5e64;
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1;
 }
 
 .empty {
