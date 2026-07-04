@@ -693,10 +693,21 @@ function ConnectSwipeCard({
     setOffsetX(0)
   }
 
+  function onPointerCancel() {
+    clearLongPressTimer()
+    isReordering.current = false
+    onStopReorder()
+    setStartX(0)
+    setStartY(0)
+    setOffsetX(0)
+    setOffsetY(0)
+  }
+
   return (
     <article
       className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''} ${isThisReordering ? 'reordering' : ''}`}
       data-connect-idea-id={idea.id}
+      onPointerCancel={onPointerCancel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

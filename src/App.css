@@ -160,6 +160,7 @@
 .connect-card {
   min-height: 60px;
   cursor: grab;
+  touch-action: none;
 }
 
 .connect-card:active {
