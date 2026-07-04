@@ -33,10 +33,13 @@ type FlyingIdea = {
 const STORAGE_KEY = 'moyatto-connect-v1'
 
 const colors = [
-  { name: 'red', value: '#e4002b' },
-  { name: 'yellow', value: '#e1c900' },
-  { name: 'green', value: '#19a974' },
-  { name: 'blue', value: '#2364d2' },
+  { name: 'pink 1', value: '#f31059' },
+  { name: 'pink 2', value: '#f31059' },
+  { name: 'pink 3', value: '#f31059' },
+  { name: 'pink 4', value: '#f31059' },
+  { name: 'pink 5', value: '#f31059' },
+  { name: 'pink 6', value: '#f31059' },
+  { name: 'pale pink', value: '#e4b1b4' },
 ]
 
 const starterIdeas: Idea[] = []
@@ -443,7 +446,7 @@ function App() {
                 <button
                   aria-label={color.name}
                   className={stickyColor === color.value ? 'selected' : ''}
-                  key={color.value}
+                  key={color.name}
                   onClick={() => setStickyColor(color.value)}
                   style={{ background: color.value }}
                   type="button"
