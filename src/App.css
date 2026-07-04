@@ -485,12 +485,6 @@
   color: #fff;
 }
 
-.composer-actions .danger-button {
-  margin-right: auto;
-  background: #fff0f0;
-  color: #d11f1f;
-}
-
 .color-row {
   display: grid;
   grid-template-columns: repeat(5, 34px);

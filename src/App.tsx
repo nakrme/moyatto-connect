@@ -73,6 +73,7 @@ function App() {
   const [addingIdea, setAddingIdea] = useState(false)
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState('')
+  const [editingImageUrl, setEditingImageUrl] = useState('')
   const [stickyTarget, setStickyTarget] = useState<string | null | undefined>()
   const [stickyTitle, setStickyTitle] = useState('')
   const [stickyColor, setStickyColor] = useState(colors[0].value)
@@ -85,7 +86,7 @@ function App() {
 
   useEffect(() => {
     const viewport = window.visualViewport
-    if (!addingIdea || !viewport) {
+    if ((!addingIdea && !editingIdeaId) || !viewport) {
       setKeyboardInset(0)
       return
     }
@@ -102,7 +103,7 @@ function App() {
       viewport.removeEventListener('resize', updateInset)
       viewport.removeEventListener('scroll', updateInset)
     }
-  }, [addingIdea])
+  }, [addingIdea, editingIdeaId])
 
   useEffect(() => {
     localStorage.setItem(
@@ -170,13 +171,16 @@ function App() {
     setAddingIdea(false)
   }
 
-  function handleDraftImageChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
 
     const reader = new FileReader()
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
+      if (typeof reader.result !== 'string') return
+      if (editingIdeaId) {
+        setEditingImageUrl(reader.result)
+      } else {
         setDraftImageUrl(reader.result)
       }
     }
@@ -189,32 +193,37 @@ function App() {
     setStickyTarget(undefined)
     setEditingIdeaId(idea.id)
     setEditingDraft(idea.text)
+    setEditingImageUrl(idea.imageUrl ?? '')
   }
 
   function saveIdea(event: FormEvent) {
     event.preventDefault()
     const text = editingDraft.trim()
-    if (!text || !editingIdeaId) return
+    if ((!text && !editingImageUrl) || !editingIdeaId) return
 
     setIdeas((current) =>
       current.map((idea) =>
-        idea.id === editingIdeaId ? { ...idea, text } : idea,
+        idea.id === editingIdeaId
+          ? { ...idea, text, imageUrl: editingImageUrl || undefined }
+          : idea,
       ),
     )
     setEditingIdeaId(null)
     setEditingDraft('')
+    setEditingImageUrl('')
   }
 
-  function deleteIdea() {
-    if (!editingIdeaId) return
-
-    setIdeas((current) => current.filter((idea) => idea.id !== editingIdeaId))
-    setConnectOrder((current) => current.filter((id) => id !== editingIdeaId))
+  function deleteIdea(id: string) {
+    setIdeas((current) => current.filter((idea) => idea.id !== id))
+    setConnectOrder((current) => current.filter((currentId) => currentId !== id))
     setStickies((current) =>
-      current.filter((sticky) => sticky.afterIdeaId !== editingIdeaId),
+      current.filter((sticky) => sticky.afterIdeaId !== id),
     )
-    setEditingIdeaId(null)
-    setEditingDraft('')
+    if (editingIdeaId === id) {
+      setEditingIdeaId(null)
+      setEditingDraft('')
+      setEditingImageUrl('')
+    }
   }
 
   function toggleImportant(id: string) {
@@ -400,6 +409,7 @@ function App() {
             <IdeaTab
               flyingIdea={flyingIdea}
               ideas={ideas.filter((idea) => !idea.important)}
+              onDeleteIdea={deleteIdea}
               onEditIdea={startEditIdea}
               onToggleImportant={toggleImportant}
             />
@@ -450,14 +460,14 @@ function App() {
               accept="image/*"
               capture="environment"
               className="visually-hidden-file"
-              onChange={handleDraftImageChange}
+              onChange={handleImageChange}
               ref={cameraInputRef}
               type="file"
             />
             <input
               accept="image/*"
               className="visually-hidden-file"
-              onChange={handleDraftImageChange}
+              onChange={handleImageChange}
               ref={pictureInputRef}
               type="file"
             />
@@ -485,27 +495,69 @@ function App() {
         ) : null}
 
         {editingIdeaId ? (
-          <form className="composer" onSubmit={saveIdea}>
-            <textarea
-              autoFocus
-              value={editingDraft}
-              onChange={(event) => setEditingDraft(event.target.value)}
-              placeholder="アイディアを編集"
-            />
-            <div className="composer-actions">
-              <button className="danger-button" type="button" onClick={deleteIdea}>
-                削除
-              </button>
+          <form className="idea-composer-screen" onSubmit={saveIdea}>
+            <div className="idea-composer-top">
               <button
+                aria-label="閉じる"
+                className="composer-close"
                 type="button"
                 onClick={() => {
                   setEditingIdeaId(null)
                   setEditingDraft('')
+                  setEditingImageUrl('')
                 }}
-              >
-                閉じる
+              />
+              <button className="composer-ok" type="submit">
+                OK
               </button>
-              <button type="submit">保存</button>
+            </div>
+            <div className="idea-composer-body">
+              <textarea
+                autoFocus
+                value={editingDraft}
+                onChange={(event) => setEditingDraft(event.target.value)}
+                placeholder="思いついたことをなんでも書いてみよう"
+              />
+              {editingImageUrl ? (
+                <div className="composer-image-preview">
+                  <img src={editingImageUrl} alt="" />
+                </div>
+              ) : null}
+            </div>
+            <input
+              accept="image/*"
+              capture="environment"
+              className="visually-hidden-file"
+              onChange={handleImageChange}
+              ref={cameraInputRef}
+              type="file"
+            />
+            <input
+              accept="image/*"
+              className="visually-hidden-file"
+              onChange={handleImageChange}
+              ref={pictureInputRef}
+              type="file"
+            />
+            <div
+              aria-label="画像追加"
+              className="composer-tool-row"
+              style={{ bottom: keyboardInset }}
+            >
+              <button
+                aria-label="カメラ"
+                onClick={() => cameraInputRef.current?.click()}
+                type="button"
+              >
+                <AiOutlineCamera />
+              </button>
+              <button
+                aria-label="写真"
+                onClick={() => pictureInputRef.current?.click()}
+                type="button"
+              >
+                <AiOutlinePicture />
+              </button>
             </div>
           </form>
         ) : null}
@@ -573,11 +625,13 @@ function App() {
 function IdeaTab({
   flyingIdea,
   ideas,
+  onDeleteIdea,
   onEditIdea,
   onToggleImportant,
 }: {
   flyingIdea: FlyingIdea
   ideas: Idea[]
+  onDeleteIdea: (id: string) => void
   onEditIdea: (idea: Idea) => void
   onToggleImportant: (id: string) => void
 }) {
@@ -590,6 +644,7 @@ function IdeaTab({
           }
           idea={idea}
           key={idea.id}
+          onDelete={() => onDeleteIdea(idea.id)}
           onEdit={() => onEditIdea(idea)}
           onSwipe={() => onToggleImportant(idea.id)}
         />
@@ -601,11 +656,13 @@ function IdeaTab({
 function SwipeCard({
   flyDirection,
   idea,
+  onDelete,
   onEdit,
   onSwipe,
 }: {
   flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
+  onDelete: () => void
   onEdit: () => void
   onSwipe: () => void
 }) {
@@ -622,14 +679,15 @@ function SwipeCard({
   function onPointerMove(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
     if (!startX) return
-    setOffsetX(Math.max(0, Math.min(86, event.clientX - startX)))
+    setOffsetX(Math.max(-86, Math.min(86, event.clientX - startX)))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
-    const finalOffsetX = Math.max(0, Math.min(86, event.clientX - startX))
+    const finalOffsetX = Math.max(-86, Math.min(86, event.clientX - startX))
     if (finalOffsetX > 54) onSwipe()
-    if (finalOffsetX < 8) onEdit()
+    else if (finalOffsetX < -54) onDelete()
+    else if (Math.abs(finalOffsetX) < 8) onEdit()
     setStartX(0)
     setOffsetX(0)
   }
