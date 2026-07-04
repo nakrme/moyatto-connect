@@ -616,90 +616,73 @@ function ConnectSwipeCard({
   reorderingIdeaId: string | null
 }) {
   const [startX, setStartX] = useState(0)
-  const [startY, setStartY] = useState(0)
   const [offsetX, setOffsetX] = useState(0)
+  const [dragStartY, setDragStartY] = useState(0)
   const [offsetY, setOffsetY] = useState(0)
-  const longPressTimer = useRef<number | undefined>(undefined)
-  const isReordering = useRef(false)
+  const isDragging = useRef(false)
   const isFlying = Boolean(flyDirection)
   const isThisReordering = reorderingIdeaId === idea.id
-
-  function clearLongPressTimer() {
-    if (!longPressTimer.current) return
-    window.clearTimeout(longPressTimer.current)
-    longPressTimer.current = undefined
-  }
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
     setStartX(event.clientX)
-    setStartY(event.clientY)
-    isReordering.current = false
-    longPressTimer.current = window.setTimeout(() => {
-      isReordering.current = true
-      setOffsetX(0)
-      setOffsetY(0)
-      onStartReorder()
-    }, 420)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
     if (!startX) return
-    const deltaX = event.clientX - startX
-    const deltaY = event.clientY - startY
-
-    if (isReordering.current) {
-      setOffsetY(deltaY)
-      return
-    }
-
-    if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
-      clearLongPressTimer()
-    }
-    if (Math.abs(deltaY) > Math.abs(deltaX)) return
-
-    setOffsetX(Math.min(0, Math.max(-86, deltaX)))
+    setOffsetX(Math.min(0, Math.max(-86, event.clientX - startX)))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
-    clearLongPressTimer()
-
-    if (isReordering.current) {
-      const target = document
-        .elementFromPoint(event.clientX, event.clientY)
-        ?.closest('[data-connect-idea-id]')
-      const targetId = target?.getAttribute('data-connect-idea-id')
-
-      if (targetId && targetId !== idea.id) {
-        onMoveIdea(idea.id, targetId)
-      }
-      isReordering.current = false
-      onStopReorder()
-      setStartX(0)
-      setStartY(0)
-      setOffsetX(0)
-      setOffsetY(0)
-      return
-    }
-
     const finalOffsetX = Math.min(0, Math.max(-86, event.clientX - startX))
     if (finalOffsetX < -54) onSwipeLeft()
     if (finalOffsetX > -8) onEdit()
     setStartX(0)
-    setStartY(0)
     setOffsetX(0)
   }
 
-  function onPointerCancel() {
-    clearLongPressTimer()
-    isReordering.current = false
+  function onHandlePointerDown(event: PointerEvent<HTMLElement>) {
+    if (isFlying) return
+    event.stopPropagation()
+    isDragging.current = true
+    setDragStartY(event.clientY)
+    setOffsetY(0)
+    onStartReorder()
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function onHandlePointerMove(event: PointerEvent<HTMLElement>) {
+    event.stopPropagation()
+    if (!isDragging.current) return
+    setOffsetY(event.clientY - dragStartY)
+  }
+
+  function onHandlePointerUp(event: PointerEvent<HTMLElement>) {
+    event.stopPropagation()
+    if (!isDragging.current) return
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest('[data-connect-idea-id]')
+    const targetId = target?.getAttribute('data-connect-idea-id')
+
+    if (targetId && targetId !== idea.id) {
+      onMoveIdea(idea.id, targetId)
+    }
+    isDragging.current = false
     onStopReorder()
-    setStartX(0)
-    setStartY(0)
-    setOffsetX(0)
+    setDragStartY(0)
+    setOffsetY(0)
+  }
+
+  function onHandlePointerCancel(event: PointerEvent<HTMLElement>) {
+    event.stopPropagation()
+    isDragging.current = false
+    onStopReorder()
+    setDragStartY(0)
     setOffsetY(0)
   }
 
@@ -707,7 +690,6 @@ function ConnectSwipeCard({
     <article
       className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''} ${isThisReordering ? 'reordering' : ''}`}
       data-connect-idea-id={idea.id}
-      onPointerCancel={onPointerCancel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -715,6 +697,17 @@ function ConnectSwipeCard({
     >
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />
+      <button
+        aria-label="並び替え"
+        className="drag-handle"
+        onPointerCancel={onHandlePointerCancel}
+        onPointerDown={onHandlePointerDown}
+        onPointerMove={onHandlePointerMove}
+        onPointerUp={onHandlePointerUp}
+        type="button"
+      >
+        <span />
+      </button>
     </article>
   )
 }
