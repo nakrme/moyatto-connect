@@ -188,6 +188,17 @@ function App() {
     }
 
     if (idea?.important) {
+      const ideaIndex = importantIdeas.findIndex((importantIdea) => importantIdea.id === id)
+      const activeSticky = orderedStickies
+        .filter((sticky) => {
+          if (sticky.afterIdeaId === null) return true
+          const stickyIndex = importantIdeas.findIndex(
+            (importantIdea) => importantIdea.id === sticky.afterIdeaId,
+          )
+          return stickyIndex < ideaIndex
+        })
+        .at(-1)
+
       setFlyingIdea({ id, direction: 'to-idea' })
       window.setTimeout(() => {
         setIdeas((current) =>
@@ -199,7 +210,10 @@ function App() {
         )
         setConnectOrder((current) => current.filter((currentId) => currentId !== id))
         setStickies((current) =>
-          current.filter((sticky) => sticky.afterIdeaId !== id),
+          current.filter(
+            (sticky) =>
+              sticky.afterIdeaId !== id && sticky.id !== activeSticky?.id,
+          ),
         )
         setFlyingIdea(null)
       }, 360)
