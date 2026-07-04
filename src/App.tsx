@@ -20,11 +20,6 @@ type Sticky = {
   afterIdeaId: string | null
 }
 
-type DragItem =
-  | { kind: 'idea'; id: string }
-  | { kind: 'sticky'; id: string }
-  | null
-
 type FlyingIdea = {
   id: string
   direction: 'to-connect' | 'to-idea'
@@ -80,7 +75,6 @@ function App() {
   const [stickyTarget, setStickyTarget] = useState<string | null | undefined>()
   const [stickyTitle, setStickyTitle] = useState('')
   const [stickyColor, setStickyColor] = useState(colors[0].value)
-  const [dragItem, setDragItem] = useState<DragItem>(null)
   const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
 
   useEffect(() => {
@@ -222,58 +216,6 @@ function App() {
     )
   }
 
-  function stickyForIdea(ideaId: string) {
-    const ideaIndex = importantIdeas.findIndex((idea) => idea.id === ideaId)
-    if (ideaIndex === -1) return undefined
-
-    return orderedStickies
-      .filter((sticky) => {
-        if (sticky.afterIdeaId === null) return true
-        const stickyIndex = importantIdeas.findIndex(
-          (idea) => idea.id === sticky.afterIdeaId,
-        )
-        return stickyIndex < ideaIndex
-      })
-      .at(-1)
-  }
-
-  function moveIdea(targetId: string) {
-    if (!dragItem) return
-
-    if (dragItem.kind === 'idea') {
-      if (dragItem.id === targetId) return
-
-      const sourceSticky = stickyForIdea(dragItem.id)
-      const destinationSticky = stickyForIdea(targetId)
-
-      setConnectOrder((current) => {
-        const next = current.filter((id) => id !== dragItem.id)
-        const targetIndex = next.indexOf(targetId)
-        next.splice(targetIndex, 0, dragItem.id)
-        return next
-      })
-
-      if (sourceSticky && sourceSticky.id !== destinationSticky?.id) {
-        setStickies((current) =>
-          current.filter((sticky) => sticky.id !== sourceSticky.id),
-        )
-      }
-    }
-
-    if (dragItem.kind === 'sticky') {
-      const previousIdeaId =
-        importantIdeas[importantIdeas.findIndex((idea) => idea.id === targetId) - 1]
-          ?.id ?? null
-      setStickies((current) =>
-        current.map((sticky) =>
-          sticky.id === dragItem.id
-            ? { ...sticky, afterIdeaId: previousIdeaId }
-            : sticky,
-        ),
-      )
-    }
-  }
-
   function addSticky(event: FormEvent) {
     event.preventDefault()
     const title = stickyTitle.trim()
@@ -368,9 +310,6 @@ function App() {
               ideas={importantIdeas}
               stickies={orderedStickies}
               colorForIdea={colorForIdea}
-              onDropIdea={moveIdea}
-              onDragStart={setDragItem}
-              onDragEnd={() => setDragItem(null)}
               onEditIdea={startEditIdea}
               onOpenSticky={(afterIdeaId) => setStickyTarget(afterIdeaId)}
               onReturnIdea={toggleImportant}
@@ -551,10 +490,11 @@ function SwipeCard({
     setOffsetX(Math.max(0, Math.min(86, event.clientX - startX)))
   }
 
-  function onPointerUp() {
+  function onPointerUp(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
-    if (offsetX > 54) onSwipe()
-    if (offsetX < 8) onEdit()
+    const finalOffsetX = Math.max(0, Math.min(86, event.clientX - startX))
+    if (finalOffsetX > 54) onSwipe()
+    if (finalOffsetX < 8) onEdit()
     setStartX(0)
     setOffsetX(0)
   }
@@ -578,9 +518,6 @@ function ConnectTab({
   ideas,
   stickies,
   colorForIdea,
-  onDropIdea,
-  onDragStart,
-  onDragEnd,
   onEditIdea,
   onOpenSticky,
   onReturnIdea,
@@ -589,9 +526,6 @@ function ConnectTab({
   ideas: Idea[]
   stickies: Sticky[]
   colorForIdea: (id: string) => string
-  onDropIdea: (targetId: string) => void
-  onDragStart: (item: DragItem) => void
-  onDragEnd: () => void
   onEditIdea: (idea: Idea) => void
   onOpenSticky: (afterIdeaId: string | null) => void
   onReturnIdea: (id: string) => void
@@ -613,11 +547,7 @@ function ConnectTab({
         return (
           <div className="connect-block" key={idea.id}>
             {stickyBeforeIdea ? (
-              <StickyLabel
-                sticky={stickyBeforeIdea}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-              />
+              <StickyLabel sticky={stickyBeforeIdea} />
             ) : (
               <button
                 className="insert-button"
@@ -632,9 +562,6 @@ function ConnectTab({
                 flyingIdea?.id === idea.id ? flyingIdea.direction : undefined
               }
               idea={idea}
-              onDragEnd={onDragEnd}
-              onDragStart={() => onDragStart({ kind: 'idea', id: idea.id })}
-              onDrop={() => onDropIdea(idea.id)}
               onEdit={() => onEditIdea(idea)}
               onSwipeLeft={() => onReturnIdea(idea.id)}
               style={{ '--bar-color': colorForIdea(idea.id) } as CSSProperties}
@@ -649,18 +576,12 @@ function ConnectTab({
 function ConnectSwipeCard({
   flyDirection,
   idea,
-  onDragEnd,
-  onDragStart,
-  onDrop,
   onEdit,
   onSwipeLeft,
   style,
 }: {
   flyDirection?: 'to-connect' | 'to-idea'
   idea: Idea
-  onDragEnd: () => void
-  onDragStart: () => void
-  onDrop: () => void
   onEdit: () => void
   onSwipeLeft: () => void
   style: CSSProperties
@@ -681,10 +602,11 @@ function ConnectSwipeCard({
     setOffsetX(Math.min(0, Math.max(-86, event.clientX - startX)))
   }
 
-  function onPointerUp() {
+  function onPointerUp(event: PointerEvent<HTMLElement>) {
     if (isFlying) return
-    if (offsetX < -54) onSwipeLeft()
-    if (offsetX > -8) onEdit()
+    const finalOffsetX = Math.min(0, Math.max(-86, event.clientX - startX))
+    if (finalOffsetX < -54) onSwipeLeft()
+    if (finalOffsetX > -8) onEdit()
     setStartX(0)
     setOffsetX(0)
   }
@@ -692,11 +614,6 @@ function ConnectSwipeCard({
   return (
     <article
       className={`idea-card connect-card ${flyDirection ? `flying-${flyDirection}` : ''}`}
-      draggable
-      onDragEnd={onDragEnd}
-      onDragOver={(event) => event.preventDefault()}
-      onDragStart={onDragStart}
-      onDrop={onDrop}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -707,21 +624,10 @@ function ConnectSwipeCard({
   )
 }
 
-function StickyLabel({
-  sticky,
-  onDragStart,
-  onDragEnd,
-}: {
-  sticky: Sticky
-  onDragStart: (item: DragItem) => void
-  onDragEnd: () => void
-}) {
+function StickyLabel({ sticky }: { sticky: Sticky }) {
   return (
     <div
       className="sticky-label"
-      draggable
-      onDragEnd={onDragEnd}
-      onDragStart={() => onDragStart({ kind: 'sticky', id: sticky.id })}
       style={{ background: sticky.color }}
     >
       {sticky.title}
