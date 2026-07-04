@@ -79,8 +79,30 @@ function App() {
   const [flyingIdea, setFlyingIdea] = useState<FlyingIdea>(null)
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
   const [draftImageUrl, setDraftImageUrl] = useState('')
+  const [keyboardInset, setKeyboardInset] = useState(0)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const pictureInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!addingIdea || !viewport) {
+      setKeyboardInset(0)
+      return
+    }
+
+    function updateInset() {
+      const inset = window.innerHeight - viewport!.height - viewport!.offsetTop
+      setKeyboardInset(Math.max(0, Math.round(inset)))
+    }
+
+    updateInset()
+    viewport.addEventListener('resize', updateInset)
+    viewport.addEventListener('scroll', updateInset)
+    return () => {
+      viewport.removeEventListener('resize', updateInset)
+      viewport.removeEventListener('scroll', updateInset)
+    }
+  }, [addingIdea])
 
   useEffect(() => {
     localStorage.setItem(
@@ -439,7 +461,11 @@ function App() {
               ref={pictureInputRef}
               type="file"
             />
-            <div className="composer-tool-row" aria-label="画像追加">
+            <div
+              aria-label="画像追加"
+              className="composer-tool-row"
+              style={{ bottom: keyboardInset }}
+            >
               <button
                 aria-label="カメラ"
                 onClick={() => cameraInputRef.current?.click()}

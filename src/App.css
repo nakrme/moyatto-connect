@@ -320,6 +320,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: 58px;
 }
 
 .composer-close {
@@ -399,11 +400,17 @@
 }
 
 .composer-tool-row {
-  flex: 0 0 auto;
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: min(100vw, 402px);
+  transform: translateX(-50%);
+  z-index: 9;
   display: flex;
   gap: 18px;
   align-items: center;
   padding: 14px 31px;
+  background: #fff;
   border-top: 1px solid #000002;
 }
 
