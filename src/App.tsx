@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, FormEvent, PointerEvent, RefObject } from 'react'
+import type {
+  ChangeEvent,
+  FormEvent,
+  PointerEvent,
+  ReactNode,
+  RefObject,
+} from 'react'
 import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
 import './App.css'
 
@@ -447,31 +453,42 @@ function IdeaTab({
   return (
     <div className="idea-list">
       {ideas.map((idea) => (
-        <SwipeCard
+        <IdeaCard
           idea={idea}
           key={idea.id}
-          onDelete={() => onDeleteIdea(idea.id)}
-          onEdit={() => onEditIdea(idea)}
-          onSwipe={() => onToggleImportant(idea.id)}
+          onSwipeLeft={() => onDeleteIdea(idea.id)}
+          onSwipeRight={() => onToggleImportant(idea.id)}
+          onTap={() => onEditIdea(idea)}
         />
       ))}
     </div>
   )
 }
 
-function SwipeCard({
+function IdeaCard({
+  children,
+  className = '',
+  connectIdeaId,
   idea,
-  onDelete,
-  onEdit,
-  onSwipe,
+  offsetY = 0,
+  onSwipeLeft,
+  onSwipeRight,
+  onTap,
 }: {
+  children?: ReactNode
+  className?: string
+  connectIdeaId?: string
   idea: Idea
-  onDelete: () => void
-  onEdit: () => void
-  onSwipe: () => void
+  offsetY?: number
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
+  onTap: () => void
 }) {
   const [startX, setStartX] = useState(0)
   const [offsetX, setOffsetX] = useState(0)
+
+  const minOffset = onSwipeLeft ? -86 : 0
+  const maxOffset = onSwipeRight ? 86 : 0
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
     setStartX(event.clientX)
@@ -480,28 +497,30 @@ function SwipeCard({
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
     if (!startX) return
-    setOffsetX(clamp(event.clientX - startX, -86, 86))
+    setOffsetX(clamp(event.clientX - startX, minOffset, maxOffset))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
-    const finalOffsetX = clamp(event.clientX - startX, -86, 86)
-    if (finalOffsetX > 54) onSwipe()
-    else if (finalOffsetX < -54) onDelete()
-    else if (Math.abs(finalOffsetX) < 8) onEdit()
+    const finalOffsetX = clamp(event.clientX - startX, minOffset, maxOffset)
+    if (finalOffsetX > 54) onSwipeRight?.()
+    else if (finalOffsetX < -54) onSwipeLeft?.()
+    else if (Math.abs(finalOffsetX) < 8) onTap()
     setStartX(0)
     setOffsetX(0)
   }
 
   return (
     <article
-      className={`idea-card ${idea.important ? 'important' : ''}`}
+      className={`idea-card ${idea.important ? 'important' : ''} ${className}`}
+      data-connect-idea-id={connectIdeaId}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      style={{ transform: `translateX(${offsetX}px)` }}
+      style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
     >
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />
+      {children}
     </article>
   )
 }
@@ -574,30 +593,10 @@ function ConnectSwipeCard({
   onStopReorder: () => void
   reorderingIdeaId: string | null
 }) {
-  const [startX, setStartX] = useState(0)
-  const [offsetX, setOffsetX] = useState(0)
   const [offsetY, setOffsetY] = useState(0)
   const dragStartY = useRef(0)
   const isDragging = useRef(false)
   const isThisReordering = reorderingIdeaId === idea.id
-
-  function onPointerDown(event: PointerEvent<HTMLElement>) {
-    setStartX(event.clientX)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function onPointerMove(event: PointerEvent<HTMLElement>) {
-    if (!startX) return
-    setOffsetX(clamp(event.clientX - startX, -86, 0))
-  }
-
-  function onPointerUp(event: PointerEvent<HTMLElement>) {
-    const finalOffsetX = clamp(event.clientX - startX, -86, 0)
-    if (finalOffsetX < -54) onSwipeLeft()
-    if (finalOffsetX > -8) onEdit()
-    setStartX(0)
-    setOffsetX(0)
-  }
 
   function onHandlePointerDown(event: PointerEvent<HTMLElement>) {
     event.preventDefault()
@@ -650,16 +649,14 @@ function ConnectSwipeCard({
   }
 
   return (
-    <article
-      className={`idea-card connect-card ${isThisReordering ? 'reordering' : ''}`}
-      data-connect-idea-id={idea.id}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
+    <IdeaCard
+      className={`connect-card ${isThisReordering ? 'reordering' : ''}`}
+      connectIdeaId={idea.id}
+      idea={idea}
+      offsetY={offsetY}
+      onSwipeLeft={onSwipeLeft}
+      onTap={onEdit}
     >
-      <p>{idea.text}</p>
-      <IdeaImage idea={idea} />
       <button
         aria-label="並び替え"
         className="drag-handle"
@@ -671,7 +668,7 @@ function ConnectSwipeCard({
       >
         <span />
       </button>
-    </article>
+    </IdeaCard>
   )
 }
 
