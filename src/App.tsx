@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, FormEvent, PointerEvent } from 'react'
+import type { ChangeEvent, FormEvent, PointerEvent, RefObject } from 'react'
 import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
 import './App.css'
 
@@ -144,6 +144,12 @@ function App() {
     setEditingImageUrl(idea.imageUrl ?? '')
   }
 
+  function closeEditor() {
+    setEditingIdeaId(null)
+    setEditingDraft('')
+    setEditingImageUrl('')
+  }
+
   function saveIdea(event: FormEvent) {
     event.preventDefault()
     const text = editingDraft.trim()
@@ -156,9 +162,7 @@ function App() {
           : idea,
       ),
     )
-    setEditingIdeaId(null)
-    setEditingDraft('')
-    setEditingImageUrl('')
+    closeEditor()
   }
 
   function deleteIdea(id: string) {
@@ -285,135 +289,31 @@ function App() {
         </div>
 
         {addingIdea ? (
-          <form className="idea-composer-screen" onSubmit={addIdea}>
-            <div className="idea-composer-top">
-              <button
-                aria-label="閉じる"
-                className="composer-close"
-                type="button"
-                onClick={() => setAddingIdea(false)}
-              />
-              <button className="composer-ok" type="submit">
-                OK
-              </button>
-            </div>
-            <div className="idea-composer-body">
-              <textarea
-                autoFocus
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="思いついたことをなんでも書いてみよう"
-              />
-              {draftImageUrl ? (
-                <div className="composer-image-preview">
-                  <img src={draftImageUrl} alt="" />
-                </div>
-              ) : null}
-            </div>
-            <input
-              accept="image/*"
-              capture="environment"
-              className="visually-hidden-file"
-              onChange={handleImageChange}
-              ref={cameraInputRef}
-              type="file"
-            />
-            <input
-              accept="image/*"
-              className="visually-hidden-file"
-              onChange={handleImageChange}
-              ref={pictureInputRef}
-              type="file"
-            />
-            <div
-              aria-label="画像追加"
-              className="composer-tool-row"
-              style={{ bottom: keyboardInset }}
-            >
-              <button
-                aria-label="カメラ"
-                onClick={() => cameraInputRef.current?.click()}
-                type="button"
-              >
-                <AiOutlineCamera />
-              </button>
-              <button
-                aria-label="写真"
-                onClick={() => pictureInputRef.current?.click()}
-                type="button"
-              >
-                <AiOutlinePicture />
-              </button>
-            </div>
-          </form>
+          <IdeaComposer
+            cameraInputRef={cameraInputRef}
+            imageUrl={draftImageUrl}
+            keyboardInset={keyboardInset}
+            onChangeImage={handleImageChange}
+            onChangeText={setDraft}
+            onClose={() => setAddingIdea(false)}
+            onSubmit={addIdea}
+            pictureInputRef={pictureInputRef}
+            text={draft}
+          />
         ) : null}
 
         {editingIdeaId ? (
-          <form className="idea-composer-screen" onSubmit={saveIdea}>
-            <div className="idea-composer-top">
-              <button
-                aria-label="閉じる"
-                className="composer-close"
-                type="button"
-                onClick={() => {
-                  setEditingIdeaId(null)
-                  setEditingDraft('')
-                  setEditingImageUrl('')
-                }}
-              />
-              <button className="composer-ok" type="submit">
-                OK
-              </button>
-            </div>
-            <div className="idea-composer-body">
-              <textarea
-                autoFocus
-                value={editingDraft}
-                onChange={(event) => setEditingDraft(event.target.value)}
-                placeholder="思いついたことをなんでも書いてみよう"
-              />
-              {editingImageUrl ? (
-                <div className="composer-image-preview">
-                  <img src={editingImageUrl} alt="" />
-                </div>
-              ) : null}
-            </div>
-            <input
-              accept="image/*"
-              capture="environment"
-              className="visually-hidden-file"
-              onChange={handleImageChange}
-              ref={cameraInputRef}
-              type="file"
-            />
-            <input
-              accept="image/*"
-              className="visually-hidden-file"
-              onChange={handleImageChange}
-              ref={pictureInputRef}
-              type="file"
-            />
-            <div
-              aria-label="画像追加"
-              className="composer-tool-row"
-              style={{ bottom: keyboardInset }}
-            >
-              <button
-                aria-label="カメラ"
-                onClick={() => cameraInputRef.current?.click()}
-                type="button"
-              >
-                <AiOutlineCamera />
-              </button>
-              <button
-                aria-label="写真"
-                onClick={() => pictureInputRef.current?.click()}
-                type="button"
-              >
-                <AiOutlinePicture />
-              </button>
-            </div>
-          </form>
+          <IdeaComposer
+            cameraInputRef={cameraInputRef}
+            imageUrl={editingImageUrl}
+            keyboardInset={keyboardInset}
+            onChangeImage={handleImageChange}
+            onChangeText={setEditingDraft}
+            onClose={closeEditor}
+            onSubmit={saveIdea}
+            pictureInputRef={pictureInputRef}
+            text={editingDraft}
+          />
         ) : null}
 
         <button
@@ -444,6 +344,92 @@ function App() {
         </nav>
       </section>
     </main>
+  )
+}
+
+function IdeaComposer({
+  cameraInputRef,
+  imageUrl,
+  keyboardInset,
+  onChangeImage,
+  onChangeText,
+  onClose,
+  onSubmit,
+  pictureInputRef,
+  text,
+}: {
+  cameraInputRef: RefObject<HTMLInputElement | null>
+  imageUrl: string
+  keyboardInset: number
+  onChangeImage: (event: ChangeEvent<HTMLInputElement>) => void
+  onChangeText: (text: string) => void
+  onClose: () => void
+  onSubmit: (event: FormEvent) => void
+  pictureInputRef: RefObject<HTMLInputElement | null>
+  text: string
+}) {
+  return (
+    <form className="idea-composer-screen" onSubmit={onSubmit}>
+      <div className="idea-composer-top">
+        <button
+          aria-label="閉じる"
+          className="composer-close"
+          type="button"
+          onClick={onClose}
+        />
+        <button className="composer-ok" type="submit">
+          OK
+        </button>
+      </div>
+      <div className="idea-composer-body">
+        <textarea
+          autoFocus
+          value={text}
+          onChange={(event) => onChangeText(event.target.value)}
+          placeholder="思いついたことをなんでも書いてみよう"
+        />
+        {imageUrl ? (
+          <div className="composer-image-preview">
+            <img src={imageUrl} alt="" />
+          </div>
+        ) : null}
+      </div>
+      <input
+        accept="image/*"
+        capture="environment"
+        className="visually-hidden-file"
+        onChange={onChangeImage}
+        ref={cameraInputRef}
+        type="file"
+      />
+      <input
+        accept="image/*"
+        className="visually-hidden-file"
+        onChange={onChangeImage}
+        ref={pictureInputRef}
+        type="file"
+      />
+      <div
+        aria-label="画像追加"
+        className="composer-tool-row"
+        style={{ bottom: keyboardInset }}
+      >
+        <button
+          aria-label="カメラ"
+          onClick={() => cameraInputRef.current?.click()}
+          type="button"
+        >
+          <AiOutlineCamera />
+        </button>
+        <button
+          aria-label="写真"
+          onClick={() => pictureInputRef.current?.click()}
+          type="button"
+        >
+          <AiOutlinePicture />
+        </button>
+      </div>
+    </form>
   )
 }
 
