@@ -14,32 +14,17 @@ type Idea = {
   createdAt: number
 }
 
-type Heading = {
-  id: string
-  title: string
-  color: string
-  afterIdeaId: string | null
-}
-
 const STORAGE_KEY = 'moyatto-connect-v1'
-const headingColors = [
-  '#000002',
-  '#ba3264',
-  '#f31059',
-  '#9faca2',
-  '#89db3b',
-  '#209bfc',
-  '#e4b1b4',
-  '#cfd72d',
-  '#9bf3ae',
-  '#fff332',
-]
 
 const starterIdeas: Idea[] = []
 
 function savedData() {
   const saved = localStorage.getItem(STORAGE_KEY)
   return saved ? JSON.parse(saved) : null
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
 }
 
 function App() {
@@ -63,14 +48,7 @@ function App() {
   const [editingDraft, setEditingDraft] = useState('')
   const [editingImageUrl, setEditingImageUrl] = useState('')
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
-  const [headingTarget, setHeadingTarget] = useState<string | null | undefined>()
-  const [headingTitle, setHeadingTitle] = useState('')
-  const [headingColor, setHeadingColor] = useState(headingColors[0])
   const [draftImageUrl, setDraftImageUrl] = useState('')
-  const [headings, setHeadings] = useState<Heading[]>(() => {
-    const saved = savedData()
-    return saved?.headings ?? []
-  })
   const [keyboardInset, setKeyboardInset] = useState(0)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const pictureInputRef = useRef<HTMLInputElement>(null)
@@ -99,17 +77,16 @@ function App() {
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ appTitle, ideas, connectOrder, headings }),
+      JSON.stringify({ appTitle, ideas, connectOrder }),
     )
-  }, [appTitle, ideas, connectOrder, headings])
+  }, [appTitle, ideas, connectOrder])
 
   useEffect(() => {
     if (ideas.some((idea) => idea.important)) return
-    if (connectOrder.length === 0 && headings.length === 0) return
+    if (connectOrder.length === 0) return
 
     setConnectOrder([])
-    setHeadings([])
-  }, [connectOrder.length, headings.length, ideas])
+  }, [connectOrder.length, ideas])
 
   const importantIdeas = useMemo(() => {
     const currentIds = ideas
@@ -122,20 +99,6 @@ function App() {
       .map((id) => ideas.find((idea) => idea.id === id))
       .filter(Boolean) as Idea[]
   }, [connectOrder, ideas])
-
-  const orderedHeadings = useMemo(() => {
-    const ideaPosition = new Map(
-      importantIdeas.map((idea, index) => [idea.id, index]),
-    )
-
-    return [...headings].sort((a, b) => {
-      const aPosition =
-        a.afterIdeaId === null ? -1 : ideaPosition.get(a.afterIdeaId) ?? 999
-      const bPosition =
-        b.afterIdeaId === null ? -1 : ideaPosition.get(b.afterIdeaId) ?? 999
-      return aPosition - bPosition
-    })
-  }, [headings, importantIdeas])
 
   function addIdea(event: FormEvent) {
     event.preventDefault()
@@ -206,9 +169,6 @@ function App() {
   function deleteIdea(id: string) {
     setIdeas((current) => current.filter((idea) => idea.id !== id))
     setConnectOrder((current) => current.filter((currentId) => currentId !== id))
-    setHeadings((current) =>
-      current.filter((heading) => heading.afterIdeaId !== id),
-    )
     if (editingIdeaId === id) {
       setEditingIdeaId(null)
       setEditingDraft('')
@@ -239,9 +199,6 @@ function App() {
         ),
       )
       setConnectOrder((current) => current.filter((currentId) => currentId !== id))
-      setHeadings((current) =>
-        current.filter((heading) => heading.afterIdeaId !== id),
-      )
       return
     }
 
@@ -269,48 +226,6 @@ function App() {
       next.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, sourceId)
       return next
     })
-  }
-
-  function headingForIdea(ideaId: string) {
-    const ideaIndex = importantIdeas.findIndex((idea) => idea.id === ideaId)
-    if (ideaIndex === -1) return undefined
-
-    return orderedHeadings
-      .filter((heading) => {
-        if (heading.afterIdeaId === null) return true
-        const headingIndex = importantIdeas.findIndex(
-          (idea) => idea.id === heading.afterIdeaId,
-        )
-        return headingIndex < ideaIndex
-      })
-      .at(-1)
-  }
-
-  function addHeading(event: FormEvent) {
-    event.preventDefault()
-    const title = headingTitle.trim()
-    if (!title) return
-
-    const afterIdeaId = headingTarget ?? null
-    if (headings.some((heading) => heading.afterIdeaId === afterIdeaId)) {
-      setHeadingTarget(undefined)
-      setHeadingTitle('')
-      setHeadingColor(headingColors[0])
-      return
-    }
-
-    setHeadings((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        title,
-        color: headingColor,
-        afterIdeaId,
-      },
-    ])
-    setHeadingTarget(undefined)
-    setHeadingTitle('')
-    setHeadingColor(headingColors[0])
   }
 
   function saveTitle() {
@@ -363,12 +278,9 @@ function App() {
             />
           ) : (
             <ConnectTab
-              headingForIdea={headingForIdea}
-              headings={orderedHeadings}
               ideas={importantIdeas}
               onEditIdea={startEditIdea}
               onMoveIdea={moveConnectIdea}
-              onOpenHeading={(afterIdeaId) => setHeadingTarget(afterIdeaId)}
               onReturnIdea={toggleImportant}
               onStartReorder={setReorderingIdeaId}
               onStopReorder={() => setReorderingIdeaId(null)}
@@ -376,42 +288,6 @@ function App() {
             />
           )}
         </div>
-
-        {headingTarget !== undefined ? (
-          <form className="heading-composer" onSubmit={addHeading}>
-            <input
-              autoFocus
-              onChange={(event) => setHeadingTitle(event.target.value)}
-              placeholder="見出し"
-              value={headingTitle}
-            />
-            <div className="heading-color-row" aria-label="見出しの色">
-              {headingColors.map((color) => (
-                <button
-                  aria-label={`見出し色 ${color}`}
-                  className={headingColor === color ? 'selected' : ''}
-                  key={color}
-                  onClick={() => setHeadingColor(color)}
-                  style={{ background: color }}
-                  type="button"
-                />
-              ))}
-            </div>
-            <div className="heading-actions">
-              <button
-                onClick={() => {
-                  setHeadingTarget(undefined)
-                  setHeadingTitle('')
-                  setHeadingColor(headingColors[0])
-                }}
-                type="button"
-              >
-                閉じる
-              </button>
-              <button type="submit">追加</button>
-            </div>
-          </form>
-        ) : null}
 
         {addingIdea ? (
           <form className="idea-composer-screen" onSubmit={addIdea}>
@@ -623,11 +499,11 @@ function SwipeCard({
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
     if (!startX) return
-    setOffsetX(Math.max(-86, Math.min(86, event.clientX - startX)))
+    setOffsetX(clamp(event.clientX - startX, -86, 86))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
-    const finalOffsetX = Math.max(-86, Math.min(86, event.clientX - startX))
+    const finalOffsetX = clamp(event.clientX - startX, -86, 86)
     if (finalOffsetX > 54) onSwipe()
     else if (finalOffsetX < -54) onDelete()
     else if (Math.abs(finalOffsetX) < 8) onEdit()
@@ -662,19 +538,14 @@ function IdeaImage({ idea }: { idea: Idea }) {
 }
 
 function ConnectTab({
-  headingForIdea,
-  headings,
   ideas,
   onEditIdea,
   onMoveIdea,
-  onOpenHeading,
   onReturnIdea,
   onStartReorder,
   onStopReorder,
   reorderingIdeaId,
 }: {
-  headingForIdea: (id: string) => Heading | undefined
-  headings: Heading[]
   ideas: Idea[]
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (
@@ -682,61 +553,30 @@ function ConnectTab({
     targetId: string,
     position: 'before' | 'after',
   ) => void
-  onOpenHeading: (afterIdeaId: string | null) => void
   onReturnIdea: (id: string) => void
   onStartReorder: (id: string) => void
   onStopReorder: () => void
   reorderingIdeaId: string | null
 }) {
-  const headingByGap = new Map(
-    headings.map((heading) => [heading.afterIdeaId, heading]),
-  )
-
   return (
     <div className="connect-list">
-      {ideas.map((idea, index) => {
-        const gapId = index === 0 ? null : ideas[index - 1].id
-        const heading = headingByGap.get(gapId)
-        const activeHeading = headingForIdea(idea.id)
-
-        return (
-          <div className="connect-block" key={idea.id}>
-            {heading ? (
-              <div
-                className="heading-label"
-                style={{ background: heading.color }}
-              >
-                {heading.title}
-              </div>
-            ) : (
-              <button
-                aria-label="見出しを追加"
-                className="insert-heading-button"
-                onClick={() => onOpenHeading(gapId)}
-                type="button"
-              >
-                +
-              </button>
-            )}
-            <ConnectSwipeCard
-              barColor={activeHeading?.color ?? '#000002'}
-              idea={idea}
-              onEdit={() => onEditIdea(idea)}
-              onMoveIdea={onMoveIdea}
-              onSwipeLeft={() => onReturnIdea(idea.id)}
-              onStartReorder={() => onStartReorder(idea.id)}
-              onStopReorder={onStopReorder}
-              reorderingIdeaId={reorderingIdeaId}
-            />
-          </div>
-        )
-      })}
+      {ideas.map((idea) => (
+        <ConnectSwipeCard
+          idea={idea}
+          key={idea.id}
+          onEdit={() => onEditIdea(idea)}
+          onMoveIdea={onMoveIdea}
+          onSwipeLeft={() => onReturnIdea(idea.id)}
+          onStartReorder={() => onStartReorder(idea.id)}
+          onStopReorder={onStopReorder}
+          reorderingIdeaId={reorderingIdeaId}
+        />
+      ))}
     </div>
   )
 }
 
 function ConnectSwipeCard({
-  barColor,
   idea,
   onEdit,
   onMoveIdea,
@@ -745,7 +585,6 @@ function ConnectSwipeCard({
   onStopReorder,
   reorderingIdeaId,
 }: {
-  barColor: string
   idea: Idea
   onEdit: () => void
   onMoveIdea: (
@@ -760,8 +599,8 @@ function ConnectSwipeCard({
 }) {
   const [startX, setStartX] = useState(0)
   const [offsetX, setOffsetX] = useState(0)
-  const [dragStartY, setDragStartY] = useState(0)
   const [offsetY, setOffsetY] = useState(0)
+  const dragStartY = useRef(0)
   const isDragging = useRef(false)
   const isThisReordering = reorderingIdeaId === idea.id
 
@@ -772,11 +611,11 @@ function ConnectSwipeCard({
 
   function onPointerMove(event: PointerEvent<HTMLElement>) {
     if (!startX) return
-    setOffsetX(Math.min(0, Math.max(-86, event.clientX - startX)))
+    setOffsetX(clamp(event.clientX - startX, -86, 0))
   }
 
   function onPointerUp(event: PointerEvent<HTMLElement>) {
-    const finalOffsetX = Math.min(0, Math.max(-86, event.clientX - startX))
+    const finalOffsetX = clamp(event.clientX - startX, -86, 0)
     if (finalOffsetX < -54) onSwipeLeft()
     if (finalOffsetX > -8) onEdit()
     setStartX(0)
@@ -784,21 +623,24 @@ function ConnectSwipeCard({
   }
 
   function onHandlePointerDown(event: PointerEvent<HTMLElement>) {
+    event.preventDefault()
     event.stopPropagation()
     isDragging.current = true
-    setDragStartY(event.clientY)
+    dragStartY.current = event.clientY
     setOffsetY(0)
     onStartReorder()
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onHandlePointerMove(event: PointerEvent<HTMLElement>) {
+    event.preventDefault()
     event.stopPropagation()
     if (!isDragging.current) return
-    setOffsetY(event.clientY - dragStartY)
+    setOffsetY(event.clientY - dragStartY.current)
   }
 
   function onHandlePointerUp(event: PointerEvent<HTMLElement>) {
+    event.preventDefault()
     event.stopPropagation()
     if (!isDragging.current) return
 
@@ -817,15 +659,16 @@ function ConnectSwipeCard({
     }
     isDragging.current = false
     onStopReorder()
-    setDragStartY(0)
+    dragStartY.current = 0
     setOffsetY(0)
   }
 
   function onHandlePointerCancel(event: PointerEvent<HTMLElement>) {
+    event.preventDefault()
     event.stopPropagation()
     isDragging.current = false
     onStopReorder()
-    setDragStartY(0)
+    dragStartY.current = 0
     setOffsetY(0)
   }
 
@@ -838,11 +681,6 @@ function ConnectSwipeCard({
       onPointerUp={onPointerUp}
       style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
     >
-      <span
-        aria-hidden="true"
-        className="connect-color-bar"
-        style={{ background: barColor }}
-      />
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />
       <button
