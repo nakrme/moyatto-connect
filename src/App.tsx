@@ -16,14 +16,28 @@ type Idea = {
   text: string
   imageUrl?: string
   important: boolean
+  groupId?: string
   createdAt: number
 }
+
+type ConnectMove = 'before' | 'after' | 'dock'
 
 const STORAGE_KEY = 'moyatto-connect-v1'
 
 function savedData() {
   const saved = localStorage.getItem(STORAGE_KEY)
   return saved ? JSON.parse(saved) : null
+}
+
+function blockIdsInOrder(
+  order: string[],
+  sourceId: string,
+  ideaById: Map<string, Idea>,
+) {
+  const groupId = ideaById.get(sourceId)?.groupId
+  if (!groupId) return [sourceId]
+
+  return order.filter((id) => ideaById.get(id)?.groupId === groupId)
 }
 
 function App() {
@@ -45,6 +59,8 @@ function App() {
   const [editingDraft, setEditingDraft] = useState('')
   const [editingImageUrl, setEditingImageUrl] = useState('')
   const [reorderingIdeaId, setReorderingIdeaId] = useState<string | null>(null)
+  const [reorderingBlockIds, setReorderingBlockIds] = useState<string[]>([])
+  const [dragOffsetY, setDragOffsetY] = useState(0)
   const [draftImageUrl, setDraftImageUrl] = useState('')
   const [keyboardInset, setKeyboardInset] = useState(0)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -195,7 +211,7 @@ function App() {
       setIdeas((current) =>
         current.map((currentIdea) =>
           currentIdea.id === id
-            ? { ...currentIdea, important: false }
+            ? { ...currentIdea, important: false, groupId: undefined }
             : currentIdea,
         ),
       )
@@ -216,17 +232,70 @@ function App() {
   function moveConnectIdea(
     sourceId: string,
     targetId: string,
-    position: 'before' | 'after',
+    position: ConnectMove,
   ) {
     if (sourceId === targetId) return
 
+    const connectIds = importantIdeas.map((idea) => idea.id)
+    const ideaById = new Map(ideas.map((idea) => [idea.id, idea]))
+    const sourceBlock = blockIdsInOrder(connectIds, sourceId, ideaById)
+    const targetBlock = blockIdsInOrder(connectIds, targetId, ideaById)
+    if (sourceBlock.some((id) => targetBlock.includes(id))) return
+
+    if (position === 'dock') {
+      const sourceIdea = ideaById.get(sourceId)
+      const targetIdea = ideaById.get(targetId)
+      const groupId =
+        targetIdea?.groupId ?? sourceIdea?.groupId ?? crypto.randomUUID()
+      const groupedIds = new Set([...sourceBlock, ...targetBlock])
+
+      setIdeas((current) =>
+        current.map((idea) =>
+          groupedIds.has(idea.id) ? { ...idea, groupId } : idea,
+        ),
+      )
+    }
+
     setConnectOrder((current) => {
-      const next = current.filter((id) => id !== sourceId)
-      const targetIndex = next.indexOf(targetId)
+      const currentIds = current
+        .filter((id) => connectIds.includes(id))
+        .concat(connectIds.filter((id) => !current.includes(id)))
+      const next = currentIds.filter((id) => !sourceBlock.includes(id))
+      const targetIds =
+        position === 'dock'
+          ? targetBlock
+          : blockIdsInOrder(next, targetId, ideaById)
+      const targetIndex = next.indexOf(
+        position === 'after' || position === 'dock'
+          ? targetIds[targetIds.length - 1]
+          : targetIds[0],
+      )
       if (targetIndex === -1) return current
-      next.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, sourceId)
+      next.splice(
+        position === 'before' ? targetIndex : targetIndex + 1,
+        0,
+        ...sourceBlock,
+      )
       return next
     })
+  }
+
+  function startReorder(id: string) {
+    const ideaById = new Map(ideas.map((idea) => [idea.id, idea]))
+    setReorderingIdeaId(id)
+    setReorderingBlockIds(
+      blockIdsInOrder(
+        importantIdeas.map((idea) => idea.id),
+        id,
+        ideaById,
+      ),
+    )
+  }
+
+  function stopReorder() {
+    setReorderingIdeaId(null)
+    setReorderingBlockIds([])
+    setDragOffsetY(0)
   }
 
   function saveTitle() {
@@ -280,11 +349,14 @@ function App() {
           ) : (
             <ConnectTab
               ideas={importantIdeas}
+              dragOffsetY={dragOffsetY}
               onEditIdea={startEditIdea}
+              onDragReorder={setDragOffsetY}
               onMoveIdea={moveConnectIdea}
               onReturnIdea={toggleImportant}
-              onStartReorder={setReorderingIdeaId}
-              onStopReorder={() => setReorderingIdeaId(null)}
+              onStartReorder={startReorder}
+              onStopReorder={stopReorder}
+              reorderingBlockIds={reorderingBlockIds}
               reorderingIdeaId={reorderingIdeaId}
             />
           )}
@@ -526,76 +598,103 @@ function IdeaImage({ idea }: { idea: Idea }) {
 }
 
 function ConnectTab({
+  dragOffsetY,
   ideas,
+  onDragReorder,
   onEditIdea,
   onMoveIdea,
   onReturnIdea,
   onStartReorder,
   onStopReorder,
+  reorderingBlockIds,
   reorderingIdeaId,
 }: {
+  dragOffsetY: number
   ideas: Idea[]
+  onDragReorder: (offsetY: number) => void
   onEditIdea: (idea: Idea) => void
-  onMoveIdea: (
-    sourceId: string,
-    targetId: string,
-    position: 'before' | 'after',
-  ) => void
+  onMoveIdea: (sourceId: string, targetId: string, position: ConnectMove) => void
   onReturnIdea: (id: string) => void
   onStartReorder: (id: string) => void
   onStopReorder: () => void
+  reorderingBlockIds: string[]
   reorderingIdeaId: string | null
 }) {
   return (
     <div className="connect-list">
-      {ideas.map((idea) => (
-        <ConnectSwipeCard
-          idea={idea}
-          key={idea.id}
-          onEdit={() => onEditIdea(idea)}
-          onMoveIdea={onMoveIdea}
-          onSwipeLeft={() => onReturnIdea(idea.id)}
-          onStartReorder={() => onStartReorder(idea.id)}
-          onStopReorder={onStopReorder}
-          reorderingIdeaId={reorderingIdeaId}
-        />
-      ))}
+      {ideas.map((idea, index) => {
+        const previousIdea = ideas[index - 1]
+        const nextIdea = ideas[index + 1]
+        const hasPreviousGroup =
+          idea.groupId && previousIdea?.groupId === idea.groupId
+        const hasNextGroup = idea.groupId && nextIdea?.groupId === idea.groupId
+        const groupClass = hasPreviousGroup
+          ? hasNextGroup
+            ? 'group-middle'
+            : 'group-end'
+          : hasNextGroup
+            ? 'group-start'
+            : ''
+
+        return (
+          <ConnectSwipeCard
+            groupClass={groupClass}
+            idea={idea}
+            isReordering={reorderingBlockIds.includes(idea.id)}
+            key={idea.id}
+            offsetY={reorderingBlockIds.includes(idea.id) ? dragOffsetY : 0}
+            onDragReorder={onDragReorder}
+            onEdit={() => onEditIdea(idea)}
+            onMoveIdea={onMoveIdea}
+            onSwipeLeft={() => onReturnIdea(idea.id)}
+            onStartReorder={() => onStartReorder(idea.id)}
+            onStopReorder={onStopReorder}
+            reorderingBlockIds={reorderingBlockIds}
+            reorderingIdeaId={reorderingIdeaId}
+          />
+        )
+      })}
     </div>
   )
 }
 
 function ConnectSwipeCard({
+  groupClass,
   idea,
+  isReordering,
+  offsetY,
+  onDragReorder,
   onEdit,
   onMoveIdea,
   onSwipeLeft,
   onStartReorder,
   onStopReorder,
+  reorderingBlockIds,
   reorderingIdeaId,
 }: {
+  groupClass: string | false | undefined
   idea: Idea
+  isReordering: boolean
+  offsetY: number
+  onDragReorder: (offsetY: number) => void
   onEdit: () => void
-  onMoveIdea: (
-    sourceId: string,
-    targetId: string,
-    position: 'before' | 'after',
-  ) => void
+  onMoveIdea: (sourceId: string, targetId: string, position: ConnectMove) => void
   onSwipeLeft: () => void
   onStartReorder: () => void
   onStopReorder: () => void
+  reorderingBlockIds: string[]
   reorderingIdeaId: string | null
 }) {
-  const [offsetY, setOffsetY] = useState(0)
   const dragStartY = useRef(0)
   const isDragging = useRef(false)
-  const isThisReordering = reorderingIdeaId === idea.id
+  const isDragHandleActive = reorderingIdeaId === idea.id
 
   function onHandlePointerDown(event: PointerEvent<HTMLElement>) {
     event.preventDefault()
     event.stopPropagation()
     isDragging.current = true
     dragStartY.current = event.clientY
-    setOffsetY(0)
+    onDragReorder(0)
     onStartReorder()
     event.currentTarget.setPointerCapture(event.pointerId)
   }
@@ -604,7 +703,7 @@ function ConnectSwipeCard({
     event.preventDefault()
     event.stopPropagation()
     if (!isDragging.current) return
-    setOffsetY(event.clientY - dragStartY.current)
+    onDragReorder(event.clientY - dragStartY.current)
   }
 
   function onHandlePointerUp(event: PointerEvent<HTMLElement>) {
@@ -614,21 +713,37 @@ function ConnectSwipeCard({
 
     const cards = Array.from(
       document.querySelectorAll<HTMLElement>('[data-connect-idea-id]'),
-    ).filter((card) => card.dataset.connectIdeaId !== idea.id)
-    const beforeCard = cards.find((card) => {
-      const rect = card.getBoundingClientRect()
-      return event.clientY < rect.top + rect.height / 2
+    ).filter((card) => {
+      const id = card.dataset.connectIdeaId
+      return id && !reorderingBlockIds.includes(id)
     })
-    const targetCard = beforeCard ?? cards.at(-1)
-    const targetId = targetCard?.dataset.connectIdeaId
+    const hoveredCard = cards.find((card) => {
+      const rect = card.getBoundingClientRect()
+      return event.clientY >= rect.top && event.clientY <= rect.bottom
+    })
 
-    if (targetId) {
-      onMoveIdea(idea.id, targetId, beforeCard ? 'before' : 'after')
+    if (hoveredCard?.dataset.connectIdeaId) {
+      const rect = hoveredCard.getBoundingClientRect()
+      const point = (event.clientY - rect.top) / rect.height
+      const position = point < 0.28 ? 'before' : point > 0.72 ? 'after' : 'dock'
+      onMoveIdea(idea.id, hoveredCard.dataset.connectIdeaId, position)
+    } else {
+      const beforeCard = cards.find((card) => {
+        const rect = card.getBoundingClientRect()
+        return event.clientY < rect.top + rect.height / 2
+      })
+      const targetCard = beforeCard ?? cards.at(-1)
+      const targetId = targetCard?.dataset.connectIdeaId
+
+      if (targetId) {
+        onMoveIdea(idea.id, targetId, beforeCard ? 'before' : 'after')
+      }
     }
+
     isDragging.current = false
     onStopReorder()
     dragStartY.current = 0
-    setOffsetY(0)
+    onDragReorder(0)
   }
 
   function onHandlePointerCancel(event: PointerEvent<HTMLElement>) {
@@ -637,12 +752,14 @@ function ConnectSwipeCard({
     isDragging.current = false
     onStopReorder()
     dragStartY.current = 0
-    setOffsetY(0)
+    onDragReorder(0)
   }
 
   return (
     <IdeaCard
-      className={`connect-card ${isThisReordering ? 'reordering' : ''}`}
+      className={`connect-card ${groupClass || ''} ${
+        isReordering ? 'reordering' : ''
+      }`}
       connectIdeaId={idea.id}
       idea={idea}
       offsetY={offsetY}
@@ -651,7 +768,7 @@ function ConnectSwipeCard({
     >
       <button
         aria-label="並び替え"
-        className="drag-handle"
+        className={`drag-handle ${isDragHandleActive ? 'active' : ''}`}
         onPointerCancel={onHandlePointerCancel}
         onPointerDown={onHandlePointerDown}
         onPointerMove={onHandlePointerMove}
