@@ -6,7 +6,11 @@ import type {
   ReactNode,
   RefObject,
 } from 'react'
-import { AiOutlineCamera, AiOutlinePicture } from 'react-icons/ai'
+import {
+  AiOutlineCamera,
+  AiOutlineDelete,
+  AiOutlinePicture,
+} from 'react-icons/ai'
 import './App.css'
 
 type Tab = 'idea' | 'connect'
@@ -53,8 +57,13 @@ function App() {
     const saved = savedData()
     return saved?.connectOrder ?? []
   })
+  const [trashedIdeas, setTrashedIdeas] = useState<Idea[]>(() => {
+    const saved = savedData()
+    return saved?.trashedIdeas ?? []
+  })
   const [draft, setDraft] = useState('')
   const [addingIdea, setAddingIdea] = useState(false)
+  const [trashOpen, setTrashOpen] = useState(false)
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState('')
   const [editingImageUrl, setEditingImageUrl] = useState('')
@@ -90,9 +99,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ appTitle, ideas, connectOrder }),
+      JSON.stringify({ appTitle, connectOrder, ideas, trashedIdeas }),
     )
-  }, [appTitle, ideas, connectOrder])
+  }, [appTitle, connectOrder, ideas, trashedIdeas])
 
   useEffect(() => {
     if (ideas.some((idea) => idea.important)) return
@@ -184,6 +193,13 @@ function App() {
   }
 
   function deleteIdea(id: string) {
+    const idea = ideas.find((currentIdea) => currentIdea.id === id)
+    if (idea) {
+      setTrashedIdeas((current) => [
+        { ...idea, groupId: undefined, important: false },
+        ...current.filter((currentIdea) => currentIdea.id !== id),
+      ])
+    }
     setIdeas((current) => current.filter((idea) => idea.id !== id))
     setConnectOrder((current) => current.filter((currentId) => currentId !== id))
     if (editingIdeaId === id) {
@@ -191,6 +207,19 @@ function App() {
       setEditingDraft('')
       setEditingImageUrl('')
     }
+  }
+
+  function restoreIdea(id: string) {
+    const idea = trashedIdeas.find((currentIdea) => currentIdea.id === id)
+    if (!idea) return
+
+    setIdeas((current) => [
+      ...current,
+      { ...idea, groupId: undefined, important: false },
+    ])
+    setTrashedIdeas((current) =>
+      current.filter((currentIdea) => currentIdea.id !== id),
+    )
   }
 
   function toggleImportant(id: string) {
@@ -338,34 +367,53 @@ function App() {
     <main className="app-shell">
       <section className={`phone-frame ${tab}-screen`} aria-label="もやっとこねくと">
         <header className="app-header">
-          {editingTitle ? (
-            <form
-              className="title-editor"
-              onSubmit={(event) => {
-                event.preventDefault()
-                saveTitle()
-              }}
-            >
-              <input
-                autoFocus
-                value={titleDraft}
-                onBlur={saveTitle}
-                onChange={(event) => setTitleDraft(event.target.value)}
-              />
-            </form>
-          ) : (
-            <button
-              className="title-button"
-              onClick={() => {
-                setTitleDraft(appTitle)
-                setEditingTitle(true)
-              }}
-              type="button"
-            >
-              {appTitle}
-            </button>
-          )}
+          <div className="title-area">
+            {editingTitle ? (
+              <form
+                className="title-editor"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  saveTitle()
+                }}
+              >
+                <input
+                  autoFocus
+                  value={titleDraft}
+                  onBlur={saveTitle}
+                  onChange={(event) => setTitleDraft(event.target.value)}
+                />
+              </form>
+            ) : (
+              <button
+                className="title-button"
+                onClick={() => {
+                  setTitleDraft(appTitle)
+                  setEditingTitle(true)
+                }}
+                type="button"
+              >
+                {appTitle}
+              </button>
+            )}
+          </div>
+          <button
+            aria-label="ゴミ箱"
+            className="trash-button"
+            onClick={() => setTrashOpen((open) => !open)}
+            type="button"
+          >
+            <AiOutlineDelete />
+            {trashedIdeas.length > 0 ? <span>{trashedIdeas.length}</span> : null}
+          </button>
         </header>
+
+        {trashOpen ? (
+          <TrashPanel
+            ideas={trashedIdeas}
+            onClose={() => setTrashOpen(false)}
+            onRestore={restoreIdea}
+          />
+        ) : null}
 
         <div className="content">
           {tab === 'idea' ? (
@@ -534,6 +582,42 @@ function IdeaComposer({
         </button>
       </div>
     </form>
+  )
+}
+
+function TrashPanel({
+  ideas,
+  onClose,
+  onRestore,
+}: {
+  ideas: Idea[]
+  onClose: () => void
+  onRestore: (id: string) => void
+}) {
+  return (
+    <section className="trash-panel" aria-label="ゴミ箱">
+      <div className="trash-panel-head">
+        <p>ゴミ箱</p>
+        <button onClick={onClose} type="button">
+          閉じる
+        </button>
+      </div>
+      {ideas.length === 0 ? (
+        <p className="trash-empty">削除したアイディアはありません</p>
+      ) : (
+        <div className="trash-list">
+          {ideas.map((idea) => (
+            <article className="trash-item" key={idea.id}>
+              <p>{idea.text}</p>
+              <IdeaImage idea={idea} />
+              <button onClick={() => onRestore(idea.id)} type="button">
+                戻す
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 

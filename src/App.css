@@ -17,6 +17,10 @@
 
 .app-header {
   padding: 46px 31px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .title-button,
@@ -36,10 +40,127 @@
   max-width: 100%;
 }
 
+.title-area {
+  flex: 1;
+  min-width: 0;
+}
+
 .title-editor input {
   width: 100%;
   outline: none;
   border-bottom: 2px solid #000002;
+}
+
+.trash-button {
+  position: relative;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #000002;
+  padding: 0;
+}
+
+.trash-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.trash-button span {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #000002;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+
+.trash-panel {
+  position: absolute;
+  z-index: 5;
+  top: 84px;
+  left: 31px;
+  right: 27px;
+  max-height: calc(100svh - 190px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #6f7478;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.12);
+  padding: 14px;
+}
+
+.trash-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.trash-panel-head p,
+.trash-empty,
+.trash-item p {
+  margin: 0;
+}
+
+.trash-panel-head p {
+  color: #000002;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.trash-panel button {
+  border: 0;
+  border-radius: 999px;
+  background: #000002;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+}
+
+.trash-empty {
+  color: #8d9397;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.trash-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #d8dde0;
+  padding: 11px;
+}
+
+.trash-item p {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  color: #707078;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.trash-item .idea-card-image {
+  width: 42px;
+  height: 42px;
 }
 
 .content {
