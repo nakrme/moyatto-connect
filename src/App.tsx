@@ -403,7 +403,6 @@ function App() {
             type="button"
           >
             <AiOutlineDelete />
-            {trashedIdeas.length > 0 ? <span>{trashedIdeas.length}</span> : null}
           </button>
         </header>
 

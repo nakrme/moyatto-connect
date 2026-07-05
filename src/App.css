@@ -69,21 +69,6 @@
   height: 22px;
 }
 
-.trash-button span {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: #000002;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 16px;
-  text-align: center;
-}
-
 .trash-panel {
   position: absolute;
   z-index: 5;
