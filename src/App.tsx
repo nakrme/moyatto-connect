@@ -26,10 +26,6 @@ function savedData() {
   return saved ? JSON.parse(saved) : null
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
 function App() {
   const [tab, setTab] = useState<Tab>('idea')
   const [appTitle, setAppTitle] = useState(() => savedData()?.appTitle ?? 'タイトル')
@@ -484,29 +480,26 @@ function IdeaCard({
   onSwipeRight?: () => void
   onTap: () => void
 }) {
-  const [startX, setStartX] = useState(0)
-  const [offsetX, setOffsetX] = useState(0)
-
-  const minOffset = onSwipeLeft ? -86 : 0
-  const maxOffset = onSwipeRight ? 86 : 0
+  const startPoint = useRef({ x: 0, y: 0 })
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
-    setStartX(event.clientX)
+    startPoint.current = { x: event.clientX, y: event.clientY }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
-  function onPointerMove(event: PointerEvent<HTMLElement>) {
-    if (!startX) return
-    setOffsetX(clamp(event.clientX - startX, minOffset, maxOffset))
-  }
-
   function onPointerUp(event: PointerEvent<HTMLElement>) {
-    const finalOffsetX = clamp(event.clientX - startX, minOffset, maxOffset)
-    if (finalOffsetX > 54) onSwipeRight?.()
-    else if (finalOffsetX < -54) onSwipeLeft?.()
-    else if (Math.abs(finalOffsetX) < 8) onTap()
-    setStartX(0)
-    setOffsetX(0)
+    const diffX = event.clientX - startPoint.current.x
+    const diffY = event.clientY - startPoint.current.y
+    const absX = Math.abs(diffX)
+    const absY = Math.abs(diffY)
+
+    if (absX > 64 && absX > absY * 1.2) {
+      if (diffX > 0) onSwipeRight?.()
+      else onSwipeLeft?.()
+      return
+    }
+
+    if (absX < 8 && absY < 8) onTap()
   }
 
   return (
@@ -514,9 +507,8 @@ function IdeaCard({
       className={`idea-card ${className}`}
       data-connect-idea-id={connectIdeaId}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
+      style={{ transform: `translateY(${offsetY}px)` }}
     >
       <p>{idea.text}</p>
       <IdeaImage idea={idea} />
