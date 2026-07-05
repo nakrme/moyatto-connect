@@ -755,20 +755,42 @@ function ConnectSwipeCard({
       const id = card.dataset.connectIdeaId
       return id && !reorderingBlockIds.includes(id)
     })
-    const hoveredCard = cards.find((card) => {
-      const rect = card.getBoundingClientRect()
-      return event.clientY >= rect.top && event.clientY <= rect.bottom
-    })
+    const draggedCards = reorderingBlockIds
+      .map((id) =>
+        document.querySelector<HTMLElement>(`[data-connect-idea-id="${id}"]`),
+      )
+      .filter(Boolean) as HTMLElement[]
+    const draggedBounds = draggedCards.reduce(
+      (bounds, card) => {
+        const rect = card.getBoundingClientRect()
+        return {
+          bottom: Math.max(bounds.bottom, rect.bottom),
+          top: Math.min(bounds.top, rect.top),
+        }
+      },
+      { bottom: -Infinity, top: Infinity },
+    )
+    const draggedCenterY =
+      draggedCards.length > 0
+        ? (draggedBounds.top + draggedBounds.bottom) / 2
+        : event.clientY
+    const dockCard = cards
+      .map((card) => {
+        const rect = card.getBoundingClientRect()
+        const overlap =
+          Math.min(draggedBounds.bottom, rect.bottom) -
+          Math.max(draggedBounds.top, rect.top)
+        return { card, overlap }
+      })
+      .filter(({ overlap }) => overlap > 0)
+      .sort((a, b) => b.overlap - a.overlap)[0]
 
-    if (hoveredCard?.dataset.connectIdeaId) {
-      const rect = hoveredCard.getBoundingClientRect()
-      const point = (event.clientY - rect.top) / rect.height
-      const position = point < 0.28 ? 'before' : point > 0.72 ? 'after' : 'dock'
-      onMoveIdea(idea.id, hoveredCard.dataset.connectIdeaId, position)
+    if (dockCard?.card.dataset.connectIdeaId) {
+      onMoveIdea(idea.id, dockCard.card.dataset.connectIdeaId, 'dock')
     } else {
       const beforeCard = cards.find((card) => {
         const rect = card.getBoundingClientRect()
-        return event.clientY < rect.top + rect.height / 2
+        return draggedCenterY < rect.top + rect.height / 2
       })
       const targetCard = beforeCard ?? cards.at(-1)
       const targetId = targetCard?.dataset.connectIdeaId
