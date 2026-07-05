@@ -82,14 +82,6 @@
   flex: 1;
 }
 
-.idea-card.important::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 8px;
-  background: #000002;
-}
-
 .idea-card:active {
   box-shadow: none;
 }

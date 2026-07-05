@@ -511,7 +511,7 @@ function IdeaCard({
 
   return (
     <article
-      className={`idea-card ${idea.important ? 'important' : ''} ${className}`}
+      className={`idea-card ${className}`}
       data-connect-idea-id={connectIdeaId}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
