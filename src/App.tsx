@@ -298,6 +298,35 @@ function App() {
     setDragOffsetY(0)
   }
 
+  function splitGroupBefore(id: string) {
+    const orderedIds = importantIdeas.map((idea) => idea.id)
+    const ideaById = new Map(ideas.map((idea) => [idea.id, idea]))
+    const groupId = ideaById.get(id)?.groupId
+    if (!groupId) return
+
+    const groupIds = orderedIds.filter(
+      (currentId) => ideaById.get(currentId)?.groupId === groupId,
+    )
+    const splitIndex = groupIds.indexOf(id)
+    if (splitIndex <= 0) return
+
+    const beforeIds = new Set(groupIds.slice(0, splitIndex))
+    const afterIds = new Set(groupIds.slice(splitIndex))
+    const nextGroupId = afterIds.size > 1 ? crypto.randomUUID() : undefined
+
+    setIdeas((current) =>
+      current.map((idea) => {
+        if (beforeIds.has(idea.id)) {
+          return beforeIds.size > 1 ? idea : { ...idea, groupId: undefined }
+        }
+        if (afterIds.has(idea.id)) {
+          return { ...idea, groupId: nextGroupId }
+        }
+        return idea
+      }),
+    )
+  }
+
   function saveTitle() {
     const nextTitle = titleDraft.trim() || 'タイトル'
     setAppTitle(nextTitle)
@@ -354,6 +383,7 @@ function App() {
               onDragReorder={setDragOffsetY}
               onMoveIdea={moveConnectIdea}
               onReturnIdea={toggleImportant}
+              onSplitGroupBefore={splitGroupBefore}
               onStartReorder={startReorder}
               onStopReorder={stopReorder}
               reorderingBlockIds={reorderingBlockIds}
@@ -604,6 +634,7 @@ function ConnectTab({
   onEditIdea,
   onMoveIdea,
   onReturnIdea,
+  onSplitGroupBefore,
   onStartReorder,
   onStopReorder,
   reorderingBlockIds,
@@ -615,6 +646,7 @@ function ConnectTab({
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (sourceId: string, targetId: string, position: ConnectMove) => void
   onReturnIdea: (id: string) => void
+  onSplitGroupBefore: (id: string) => void
   onStartReorder: (id: string) => void
   onStopReorder: () => void
   reorderingBlockIds: string[]
@@ -638,6 +670,7 @@ function ConnectTab({
 
         return (
           <ConnectSwipeCard
+            canSplitBefore={Boolean(hasPreviousGroup)}
             groupClass={groupClass}
             idea={idea}
             isReordering={reorderingBlockIds.includes(idea.id)}
@@ -646,6 +679,7 @@ function ConnectTab({
             onDragReorder={onDragReorder}
             onEdit={() => onEditIdea(idea)}
             onMoveIdea={onMoveIdea}
+            onSplitBefore={() => onSplitGroupBefore(idea.id)}
             onSwipeLeft={() => onReturnIdea(idea.id)}
             onStartReorder={() => onStartReorder(idea.id)}
             onStopReorder={onStopReorder}
@@ -659,6 +693,7 @@ function ConnectTab({
 }
 
 function ConnectSwipeCard({
+  canSplitBefore,
   groupClass,
   idea,
   isReordering,
@@ -666,12 +701,14 @@ function ConnectSwipeCard({
   onDragReorder,
   onEdit,
   onMoveIdea,
+  onSplitBefore,
   onSwipeLeft,
   onStartReorder,
   onStopReorder,
   reorderingBlockIds,
   reorderingIdeaId,
 }: {
+  canSplitBefore: boolean
   groupClass: string | false | undefined
   idea: Idea
   isReordering: boolean
@@ -679,6 +716,7 @@ function ConnectSwipeCard({
   onDragReorder: (offsetY: number) => void
   onEdit: () => void
   onMoveIdea: (sourceId: string, targetId: string, position: ConnectMove) => void
+  onSplitBefore: () => void
   onSwipeLeft: () => void
   onStartReorder: () => void
   onStopReorder: () => void
@@ -766,6 +804,19 @@ function ConnectSwipeCard({
       onSwipeLeft={onSwipeLeft}
       onTap={onEdit}
     >
+      {canSplitBefore ? (
+        <button
+          aria-label="ここで切り離す"
+          className="dock-split"
+          onClick={(event) => {
+            event.stopPropagation()
+            onSplitBefore()
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerUp={(event) => event.stopPropagation()}
+          type="button"
+        />
+      ) : null}
       <button
         aria-label="並び替え"
         className={`drag-handle ${isDragHandleActive ? 'active' : ''}`}

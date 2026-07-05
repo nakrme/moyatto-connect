@@ -117,6 +117,28 @@
   border-top-color: #d8dde0;
 }
 
+.dock-split {
+  position: absolute;
+  top: -7px;
+  left: 16px;
+  right: 56px;
+  height: 14px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  z-index: 2;
+}
+
+.dock-split::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 1px;
+  background: #c8cfd2;
+}
+
 .connect-card.reordering {
   z-index: 3;
   opacity: 0.92;
