@@ -652,6 +652,24 @@ function ConnectTab({
   reorderingBlockIds: string[]
   reorderingIdeaId: string | null
 }) {
+  const reorderingIndexes = reorderingBlockIds
+    .map((id) => ideas.findIndex((idea) => idea.id === id))
+    .filter((index) => index >= 0)
+  const firstReorderingIndex =
+    reorderingIndexes.length > 0 ? Math.min(...reorderingIndexes) : -1
+  const lastReorderingIndex =
+    reorderingIndexes.length > 0 ? Math.max(...reorderingIndexes) : -1
+  const adjacentDockIdeas = [
+    ideas[firstReorderingIndex - 1],
+    ideas[lastReorderingIndex + 1],
+  ].filter(Boolean) as Idea[]
+  const adjacentDockIds = adjacentDockIdeas.flatMap((adjacentIdea) => {
+    if (!adjacentIdea.groupId) return [adjacentIdea.id]
+    return ideas
+      .filter((idea) => idea.groupId === adjacentIdea.groupId)
+      .map((idea) => idea.id)
+  })
+
   return (
     <div className="connect-list">
       {ideas.map((idea, index) => {
@@ -670,6 +688,7 @@ function ConnectTab({
 
         return (
           <ConnectSwipeCard
+            adjacentDockIds={adjacentDockIds}
             canSplitBefore={Boolean(hasPreviousGroup)}
             groupClass={groupClass}
             idea={idea}
@@ -693,6 +712,7 @@ function ConnectTab({
 }
 
 function ConnectSwipeCard({
+  adjacentDockIds,
   canSplitBefore,
   groupClass,
   idea,
@@ -708,6 +728,7 @@ function ConnectSwipeCard({
   reorderingBlockIds,
   reorderingIdeaId,
 }: {
+  adjacentDockIds: string[]
   canSplitBefore: boolean
   groupClass: string | false | undefined
   idea: Idea
@@ -775,6 +796,10 @@ function ConnectSwipeCard({
         ? (draggedBounds.top + draggedBounds.bottom) / 2
         : event.clientY
     const dockCard = cards
+      .filter((card) => {
+        const id = card.dataset.connectIdeaId
+        return id ? adjacentDockIds.includes(id) : false
+      })
       .map((card) => {
         const rect = card.getBoundingClientRect()
         const overlap =
