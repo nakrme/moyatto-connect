@@ -8,15 +8,12 @@ type Tab = 'idea' | 'connect'
 type Idea = {
   id: string
   text: string
-  image?: boolean
   imageUrl?: string
   important: boolean
   createdAt: number
 }
 
 const STORAGE_KEY = 'moyatto-connect-v1'
-
-const starterIdeas: Idea[] = []
 
 function savedData() {
   const saved = localStorage.getItem(STORAGE_KEY)
@@ -34,13 +31,11 @@ function App() {
   const [titleDraft, setTitleDraft] = useState(appTitle)
   const [ideas, setIdeas] = useState<Idea[]>(() => {
     const saved = savedData()
-    return saved?.ideas ?? starterIdeas
+    return saved?.ideas ?? []
   })
   const [connectOrder, setConnectOrder] = useState<string[]>(() => {
     const saved = savedData()
-    return saved
-      ? saved.connectOrder
-      : starterIdeas.filter((idea) => idea.important).map((idea) => idea.id)
+    return saved?.connectOrder ?? []
   })
   const [draft, setDraft] = useState('')
   const [addingIdea, setAddingIdea] = useState(false)
@@ -89,14 +84,14 @@ function App() {
   }, [connectOrder.length, ideas])
 
   const importantIdeas = useMemo(() => {
-    const currentIds = ideas
-      .filter((idea) => idea.important)
-      .map((idea) => idea.id)
+    const currentIdeas = ideas.filter((idea) => idea.important)
+    const currentIds = currentIdeas.map((idea) => idea.id)
+    const ideaById = new Map(currentIdeas.map((idea) => [idea.id, idea]))
 
     return connectOrder
       .filter((id) => currentIds.includes(id))
       .concat(currentIds.filter((id) => !connectOrder.includes(id)))
-      .map((id) => ideas.find((idea) => idea.id === id))
+      .map((id) => ideaById.get(id))
       .filter(Boolean) as Idea[]
   }, [connectOrder, ideas])
 
@@ -528,10 +523,6 @@ function SwipeCard({
 function IdeaImage({ idea }: { idea: Idea }) {
   if (idea.imageUrl) {
     return <img className="idea-card-image" src={idea.imageUrl} alt="" />
-  }
-
-  if (idea.image) {
-    return <div className="image-placeholder" />
   }
 
   return null
