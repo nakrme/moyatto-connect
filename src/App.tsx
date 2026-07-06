@@ -9,6 +9,7 @@ import type {
 import {
   AiOutlineCamera,
   AiOutlineDelete,
+  AiOutlineFolderOpen,
   AiOutlinePicture,
 } from 'react-icons/ai'
 import './App.css'
@@ -26,11 +27,61 @@ type Idea = {
 
 type ConnectMove = 'before' | 'after' | 'dock'
 
+type Project = {
+  id: string
+  title: string
+  ideas: Idea[]
+  connectOrder: string[]
+  trashedIdeas: Idea[]
+  updatedAt: number
+}
+
 const STORAGE_KEY = 'moyatto-connect-v1'
 
 function savedData() {
   const saved = localStorage.getItem(STORAGE_KEY)
   return saved ? JSON.parse(saved) : null
+}
+
+function blankProject(): Project {
+  return {
+    id: crypto.randomUUID(),
+    title: 'タイトル',
+    ideas: [],
+    connectOrder: [],
+    trashedIdeas: [],
+    updatedAt: Date.now(),
+  }
+}
+
+function initialState() {
+  const saved = savedData()
+  const projects = saved?.projects as Project[] | undefined
+
+  if (projects?.length) {
+    const activeProject =
+      projects.find((project) => project.id === saved?.activeProjectId) ??
+      projects[0]
+
+    return {
+      activeProject,
+      projects,
+    }
+  }
+
+  const activeProject: Project = {
+    id: crypto.randomUUID(),
+    title: saved?.appTitle ?? 'タイトル',
+    ideas: saved?.ideas ?? [],
+    connectOrder: saved?.connectOrder ?? [],
+    trashedIdeas: saved?.trashedIdeas ?? [],
+    updatedAt: Date.now(),
+  }
+
+  return {
+    activeProject,
+    projects: [activeProject],
+  }
 }
 
 function blockIdsInOrder(
@@ -45,24 +96,23 @@ function blockIdsInOrder(
 }
 
 function App() {
+  const initial = useMemo(() => initialState(), [])
   const [tab, setTab] = useState<Tab>('idea')
-  const [appTitle, setAppTitle] = useState(() => savedData()?.appTitle ?? 'タイトル')
+  const [activeProjectId, setActiveProjectId] = useState(initial.activeProject.id)
+  const [projects, setProjects] = useState<Project[]>(initial.projects)
+  const [appTitle, setAppTitle] = useState(initial.activeProject.title)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(appTitle)
-  const [ideas, setIdeas] = useState<Idea[]>(() => {
-    const saved = savedData()
-    return saved?.ideas ?? []
-  })
-  const [connectOrder, setConnectOrder] = useState<string[]>(() => {
-    const saved = savedData()
-    return saved?.connectOrder ?? []
-  })
-  const [trashedIdeas, setTrashedIdeas] = useState<Idea[]>(() => {
-    const saved = savedData()
-    return saved?.trashedIdeas ?? []
-  })
+  const [ideas, setIdeas] = useState<Idea[]>(initial.activeProject.ideas)
+  const [connectOrder, setConnectOrder] = useState<string[]>(
+    initial.activeProject.connectOrder,
+  )
+  const [trashedIdeas, setTrashedIdeas] = useState<Idea[]>(
+    initial.activeProject.trashedIdeas,
+  )
   const [draft, setDraft] = useState('')
   const [addingIdea, setAddingIdea] = useState(false)
+  const [folderOpen, setFolderOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState('')
@@ -99,9 +149,33 @@ function App() {
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ appTitle, connectOrder, ideas, trashedIdeas }),
+      JSON.stringify({
+        activeProjectId,
+        appTitle,
+        connectOrder,
+        ideas,
+        projects,
+        trashedIdeas,
+      }),
     )
-  }, [appTitle, connectOrder, ideas, trashedIdeas])
+  }, [activeProjectId, appTitle, connectOrder, ideas, projects, trashedIdeas])
+
+  useEffect(() => {
+    setProjects((current) =>
+      current.map((project) =>
+        project.id === activeProjectId
+          ? {
+              ...project,
+              connectOrder,
+              ideas,
+              title: appTitle,
+              trashedIdeas,
+              updatedAt: Date.now(),
+            }
+          : project,
+      ),
+    )
+  }, [activeProjectId, appTitle, connectOrder, ideas, trashedIdeas])
 
   useEffect(() => {
     if (ideas.some((idea) => idea.important)) return
@@ -226,6 +300,26 @@ function App() {
     setTrashedIdeas((current) =>
       current.filter((currentIdea) => currentIdea.id !== id),
     )
+  }
+
+  function openProject(project: Project) {
+    setActiveProjectId(project.id)
+    setAppTitle(project.title)
+    setTitleDraft(project.title)
+    setIdeas(project.ideas)
+    setConnectOrder(project.connectOrder)
+    setTrashedIdeas(project.trashedIdeas)
+    setAddingIdea(false)
+    setEditingIdeaId(null)
+    setFolderOpen(false)
+    setTrashOpen(false)
+    setTab('idea')
+  }
+
+  function createProject() {
+    const project = blankProject()
+    setProjects((current) => [project, ...current])
+    openProject(project)
   }
 
   function toggleImportant(id: string) {
@@ -402,15 +496,41 @@ function App() {
               </button>
             )}
           </div>
-          <button
-            aria-label="ゴミ箱"
-            className="trash-button"
-            onClick={() => setTrashOpen((open) => !open)}
-            type="button"
-          >
-            <AiOutlineDelete />
-          </button>
+          <div className="header-actions">
+            <button
+              aria-label="フォルダ"
+              className="header-icon-button"
+              onClick={() => {
+                setFolderOpen((open) => !open)
+                setTrashOpen(false)
+              }}
+              type="button"
+            >
+              <AiOutlineFolderOpen />
+            </button>
+            <button
+              aria-label="ゴミ箱"
+              className="header-icon-button"
+              onClick={() => {
+                setTrashOpen((open) => !open)
+                setFolderOpen(false)
+              }}
+              type="button"
+            >
+              <AiOutlineDelete />
+            </button>
+          </div>
         </header>
+
+        {folderOpen ? (
+          <FolderPanel
+            activeProjectId={activeProjectId}
+            onClose={() => setFolderOpen(false)}
+            onCreate={createProject}
+            onOpen={openProject}
+            projects={projects}
+          />
+        ) : null}
 
         {trashOpen ? (
           <TrashPanel
@@ -588,6 +708,53 @@ function IdeaComposer({
         </button>
       </div>
     </form>
+  )
+}
+
+function FolderPanel({
+  activeProjectId,
+  onClose,
+  onCreate,
+  onOpen,
+  projects,
+}: {
+  activeProjectId: string
+  onClose: () => void
+  onCreate: () => void
+  onOpen: (project: Project) => void
+  projects: Project[]
+}) {
+  const sortedProjects = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)
+
+  return (
+    <section className="folder-panel" aria-label="保存したタイトル">
+      <div className="panel-head">
+        <p>フォルダ</p>
+        <button onClick={onClose} type="button">
+          閉じる
+        </button>
+      </div>
+      <button className="new-project-button" onClick={onCreate} type="button">
+        新しいタイトル
+      </button>
+      <div className="project-list">
+        {sortedProjects.map((project) => (
+          <button
+            className={`project-item ${
+              project.id === activeProjectId ? 'active' : ''
+            }`}
+            key={project.id}
+            onClick={() => onOpen(project)}
+            type="button"
+          >
+            <span>{project.title}</span>
+            <small>
+              {project.ideas.length} ideas
+            </small>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 

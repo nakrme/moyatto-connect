@@ -51,11 +51,17 @@
   border-bottom: 2px solid #000002;
 }
 
-.trash-button {
+.header-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-icon-button {
   position: relative;
   width: 31px;
   height: 31px;
-  flex: 0 0 auto;
   display: grid;
   place-items: center;
   border: 0;
@@ -64,11 +70,12 @@
   padding: 0;
 }
 
-.trash-button svg {
+.header-icon-button svg {
   width: 22px;
   height: 22px;
 }
 
+.folder-panel,
 .trash-panel {
   position: absolute;
   z-index: 5;
@@ -83,6 +90,7 @@
   padding: 14px;
 }
 
+.panel-head,
 .trash-panel-head {
   display: flex;
   align-items: center;
@@ -91,18 +99,21 @@
   margin-bottom: 12px;
 }
 
+.panel-head p,
 .trash-panel-head p,
 .trash-empty,
 .trash-item p {
   margin: 0;
 }
 
+.panel-head p,
 .trash-panel-head p {
   color: #000002;
   font-size: 14px;
   font-weight: 800;
 }
 
+.folder-panel button,
 .trash-panel button {
   border: 0;
   border-radius: 999px;
@@ -112,6 +123,50 @@
   font-size: 12px;
   font-weight: 800;
   padding: 6px 12px;
+}
+
+.new-project-button {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.folder-panel .project-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #d8dde0;
+  color: #707078;
+  padding: 12px;
+  text-align: left;
+}
+
+.folder-panel .project-item.active {
+  box-shadow: inset 0 0 0 1px #000002;
+  color: #000002;
+}
+
+.project-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-item small {
+  flex: 0 0 auto;
+  color: #9aa1a5;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .trash-actions {
