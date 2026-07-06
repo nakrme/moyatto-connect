@@ -114,6 +114,19 @@
   padding: 6px 12px;
 }
 
+.trash-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.trash-panel .trash-delete {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #000002;
+  color: #000002;
+}
+
 .trash-empty {
   color: #8d9397;
   font-size: 13px;

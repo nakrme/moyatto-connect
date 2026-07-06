@@ -222,6 +222,12 @@ function App() {
     )
   }
 
+  function deleteTrashedIdea(id: string) {
+    setTrashedIdeas((current) =>
+      current.filter((currentIdea) => currentIdea.id !== id),
+    )
+  }
+
   function toggleImportant(id: string) {
     const idea = ideas.find((currentIdea) => currentIdea.id === id)
     if (idea && !idea.important) {
@@ -410,6 +416,7 @@ function App() {
           <TrashPanel
             ideas={trashedIdeas}
             onClose={() => setTrashOpen(false)}
+            onDelete={deleteTrashedIdea}
             onRestore={restoreIdea}
           />
         ) : null}
@@ -587,10 +594,12 @@ function IdeaComposer({
 function TrashPanel({
   ideas,
   onClose,
+  onDelete,
   onRestore,
 }: {
   ideas: Idea[]
   onClose: () => void
+  onDelete: (id: string) => void
   onRestore: (id: string) => void
 }) {
   return (
@@ -609,9 +618,18 @@ function TrashPanel({
             <article className="trash-item" key={idea.id}>
               <p>{idea.text}</p>
               <IdeaImage idea={idea} />
-              <button onClick={() => onRestore(idea.id)} type="button">
-                戻す
-              </button>
+              <div className="trash-actions">
+                <button onClick={() => onRestore(idea.id)} type="button">
+                  戻す
+                </button>
+                <button
+                  className="trash-delete"
+                  onClick={() => onDelete(idea.id)}
+                  type="button"
+                >
+                  削除
+                </button>
+              </div>
             </article>
           ))}
         </div>
