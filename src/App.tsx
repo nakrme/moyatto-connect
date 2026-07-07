@@ -147,20 +147,6 @@ function App() {
   }, [addingIdea, editingIdeaId])
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        activeProjectId,
-        appTitle,
-        connectOrder,
-        ideas,
-        projects,
-        trashedIdeas,
-      }),
-    )
-  }, [activeProjectId, appTitle, connectOrder, ideas, projects, trashedIdeas])
-
-  useEffect(() => {
     setProjects((current) =>
       current.map((project) =>
         project.id === activeProjectId
@@ -176,6 +162,33 @@ function App() {
       ),
     )
   }, [activeProjectId, appTitle, connectOrder, ideas, trashedIdeas])
+
+  useEffect(() => {
+    const savedProjects = projects.map((project) =>
+      project.id === activeProjectId
+        ? {
+            ...project,
+            connectOrder,
+            ideas,
+            title: appTitle,
+            trashedIdeas,
+            updatedAt: Date.now(),
+          }
+        : project,
+    )
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        activeProjectId,
+        appTitle,
+        connectOrder,
+        ideas,
+        projects: savedProjects,
+        trashedIdeas,
+      }),
+    )
+  }, [activeProjectId, appTitle, connectOrder, ideas, projects, trashedIdeas])
 
   useEffect(() => {
     if (ideas.some((idea) => idea.important)) return
