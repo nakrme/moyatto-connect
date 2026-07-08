@@ -554,18 +554,6 @@ function App() {
               <AiOutlineFolderOpen />
             </button>
             <button
-              aria-label="ヘルプ"
-              className="header-icon-button help-button"
-              onClick={() => {
-                setHelpOpen((open) => !open)
-                setFolderOpen(false)
-                setTrashOpen(false)
-              }}
-              type="button"
-            >
-              ?
-            </button>
-            <button
               aria-label="ゴミ箱"
               className="header-icon-button"
               onClick={() => {
@@ -576,6 +564,18 @@ function App() {
               type="button"
             >
               <AiOutlineDelete />
+            </button>
+            <button
+              aria-label="ヘルプ"
+              className="header-icon-button help-button"
+              onClick={() => {
+                setHelpOpen((open) => !open)
+                setFolderOpen(false)
+                setTrashOpen(false)
+              }}
+              type="button"
+            >
+              ?
             </button>
           </div>
         </header>
