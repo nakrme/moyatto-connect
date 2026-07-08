@@ -1076,19 +1076,22 @@ function ConnectSwipeCard({
       draggedCards.length > 0
         ? (draggedBounds.top + draggedBounds.bottom) / 2
         : event.clientY
+    const draggedHeight = draggedBounds.bottom - draggedBounds.top
     const dockCard = cards
-      .filter((card) => {
-        const id = card.dataset.connectIdeaId
-        return id ? adjacentDockIds.includes(id) : false
-      })
       .map((card) => {
         const rect = card.getBoundingClientRect()
         const overlap =
           Math.min(draggedBounds.bottom, rect.bottom) -
           Math.max(draggedBounds.top, rect.top)
-        return { card, overlap }
+        const id = card.dataset.connectIdeaId
+        const isAdjacent = id ? adjacentDockIds.includes(id) : false
+        const requiredOverlap = isAdjacent
+          ? 0
+          : Math.min(draggedHeight, rect.height) * 0.45
+
+        return { card, overlap, requiredOverlap }
       })
-      .filter(({ overlap }) => overlap > 0)
+      .filter(({ overlap, requiredOverlap }) => overlap > requiredOverlap)
       .sort((a, b) => b.overlap - a.overlap)[0]
 
     if (dockCard?.card.dataset.connectIdeaId) {
