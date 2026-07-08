@@ -135,6 +135,7 @@ function App() {
   const [draft, setDraft] = useState('')
   const [addingIdea, setAddingIdea] = useState(false)
   const [folderOpen, setFolderOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState('')
@@ -545,6 +546,7 @@ function App() {
               className="header-icon-button"
               onClick={() => {
                 setFolderOpen((open) => !open)
+                setHelpOpen(false)
                 setTrashOpen(false)
               }}
               type="button"
@@ -552,11 +554,24 @@ function App() {
               <AiOutlineFolderOpen />
             </button>
             <button
+              aria-label="ヘルプ"
+              className="header-icon-button help-button"
+              onClick={() => {
+                setHelpOpen((open) => !open)
+                setFolderOpen(false)
+                setTrashOpen(false)
+              }}
+              type="button"
+            >
+              ?
+            </button>
+            <button
               aria-label="ゴミ箱"
               className="header-icon-button"
               onClick={() => {
                 setTrashOpen((open) => !open)
                 setFolderOpen(false)
+                setHelpOpen(false)
               }}
               type="button"
             >
@@ -574,6 +589,8 @@ function App() {
             projects={projects}
           />
         ) : null}
+
+        {helpOpen ? <HelpPanel onClose={() => setHelpOpen(false)} /> : null}
 
         {trashOpen ? (
           <TrashPanel
@@ -797,6 +814,41 @@ function FolderPanel({
             </small>
           </button>
         ))}
+      </div>
+    </section>
+  )
+}
+
+function HelpPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <section className="help-panel" aria-label="操作説明">
+      <div className="panel-head">
+        <p>使い方</p>
+        <button onClick={onClose} type="button">
+          閉じる
+        </button>
+      </div>
+      <div className="help-list">
+        <section>
+          <h2>idea</h2>
+          <p>思いついたことをカードとして書き留めます。</p>
+          <p>右スワイプでconnectへ送り、左スワイプでゴミ箱へ移します。</p>
+        </section>
+        <section>
+          <h2>connect</h2>
+          <p>カード右側のハンドルをドラッグすると順番を変えられます。</p>
+          <p>カード同士の隙間をタップするとドッキングします。</p>
+          <p>つながったカードの境目をタップすると切り離せます。</p>
+        </section>
+        <section>
+          <h2>folder</h2>
+          <p>タイトルごとに作業が自動保存されます。</p>
+          <p>フォルダから過去のタイトルを開くと、続きから再開できます。</p>
+        </section>
+        <section>
+          <h2>trash</h2>
+          <p>削除したカードはゴミ箱から戻せます。</p>
+        </section>
       </div>
     </section>
   )

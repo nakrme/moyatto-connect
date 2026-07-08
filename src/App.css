@@ -75,7 +75,16 @@
   height: 22px;
 }
 
+.help-button {
+  border: 1px solid #000002;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .folder-panel,
+.help-panel,
 .trash-panel {
   position: absolute;
   z-index: 5;
@@ -100,6 +109,7 @@
 }
 
 .panel-head p,
+.help-list p,
 .trash-panel-head p,
 .trash-empty,
 .trash-item p {
@@ -123,6 +133,26 @@
   font-size: 12px;
   font-weight: 800;
   padding: 6px 12px;
+}
+
+.help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.help-list h2 {
+  margin: 0 0 4px;
+  color: #000002;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.help-list p {
+  color: #707078;
+  font-size: 13px;
+  line-height: 1.75;
 }
 
 .new-project-button {
