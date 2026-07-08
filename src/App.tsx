@@ -95,6 +95,28 @@ function blockIdsInOrder(
   return order.filter((id) => ideaById.get(id)?.groupId === groupId)
 }
 
+function scrollContentWhileDragging(pointerY: number) {
+  const content = document.querySelector<HTMLElement>('.content')
+  if (!content) return
+
+  const rect = content.getBoundingClientRect()
+  const edgeSize = 72
+  const maxSpeed = 18
+  const topDistance = pointerY - rect.top
+  const bottomDistance = rect.bottom - pointerY
+
+  if (topDistance < edgeSize) {
+    const speed = ((edgeSize - topDistance) / edgeSize) * maxSpeed
+    content.scrollBy({ top: -speed })
+    return
+  }
+
+  if (bottomDistance < edgeSize) {
+    const speed = ((edgeSize - bottomDistance) / edgeSize) * maxSpeed
+    content.scrollBy({ top: speed })
+  }
+}
+
 function App() {
   const initial = useMemo(() => initialState(), [])
   const [tab, setTab] = useState<Tab>('idea')
@@ -1043,6 +1065,7 @@ function ConnectSwipeCard({
     event.preventDefault()
     event.stopPropagation()
     if (!isDragging.current) return
+    scrollContentWhileDragging(event.clientY)
     onDragReorder(event.clientY - dragStartY.current)
   }
 
