@@ -12,7 +12,6 @@ import {
   AiOutlineFolderOpen,
   AiOutlinePicture,
 } from 'react-icons/ai'
-import splashImage from './assets/piecea-splash.png'
 import './App.css'
 
 type Tab = 'idea' | 'connect'
@@ -121,7 +120,6 @@ function scrollContentWhileDragging(pointerY: number) {
 
 function App() {
   const initial = useMemo(() => initialState(), [])
-  const [showSplash, setShowSplash] = useState(true)
   const [tab, setTab] = useState<Tab>('idea')
   const [activeProjectId, setActiveProjectId] = useState(initial.activeProject.id)
   const [projects, setProjects] = useState<Project[]>(initial.projects)
@@ -150,14 +148,6 @@ function App() {
   const [keyboardInset, setKeyboardInset] = useState(0)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const pictureInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShowSplash(false)
-    }, 3000)
-
-    return () => window.clearTimeout(timer)
-  }, [])
 
   useEffect(() => {
     const viewport = window.visualViewport
@@ -521,11 +511,6 @@ function App() {
   return (
     <main className="app-shell">
       <section className={`phone-frame ${tab}-screen`} aria-label="Piecea">
-        {showSplash && (
-          <div className="splash-screen" aria-label="Piecea ようこそ">
-            <img src={splashImage} alt="Piecea ようこそ" />
-          </div>
-        )}
         <header className="app-header">
           <div className="title-area">
             {editingTitle ? (
