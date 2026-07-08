@@ -36,10 +36,11 @@ type Project = {
   updatedAt: number
 }
 
-const STORAGE_KEY = 'moyatto-connect-v1'
+const STORAGE_KEY = 'piecea-v1'
+const LEGACY_STORAGE_KEY = 'moyatto-connect-v1'
 
 function savedData() {
-  const saved = localStorage.getItem(STORAGE_KEY)
+  const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
   return saved ? JSON.parse(saved) : null
 }
 
@@ -509,7 +510,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      <section className={`phone-frame ${tab}-screen`} aria-label="もやっとこねくと">
+      <section className={`phone-frame ${tab}-screen`} aria-label="Piecea">
         <header className="app-header">
           <div className="title-area">
             {editingTitle ? (
