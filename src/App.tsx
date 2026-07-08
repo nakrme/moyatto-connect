@@ -1077,7 +1077,7 @@ function ConnectSwipeCard({
         ? (draggedBounds.top + draggedBounds.bottom) / 2
         : event.clientY
     const draggedHeight = draggedBounds.bottom - draggedBounds.top
-    const dockCard = cards
+    const dockTargets = cards
       .map((card) => {
         const rect = card.getBoundingClientRect()
         const overlap =
@@ -1089,10 +1089,18 @@ function ConnectSwipeCard({
           ? 0
           : Math.min(draggedHeight, rect.height) * 0.45
 
-        return { card, overlap, requiredOverlap }
+        return {
+          card,
+          overlap,
+          pointerInside:
+            event.clientY >= rect.top && event.clientY <= rect.bottom,
+          requiredOverlap,
+        }
       })
       .filter(({ overlap, requiredOverlap }) => overlap > requiredOverlap)
-      .sort((a, b) => b.overlap - a.overlap)[0]
+    const dockCard =
+      dockTargets.find(({ pointerInside }) => pointerInside) ??
+      dockTargets.sort((a, b) => b.overlap - a.overlap)[0]
 
     if (dockCard?.card.dataset.connectIdeaId) {
       onMoveIdea(idea.id, dockCard.card.dataset.connectIdeaId, 'dock')
