@@ -291,7 +291,7 @@
   border-top-color: #d8dde0;
 }
 
-.dock-split {
+.dock-gap {
   position: absolute;
   top: -7px;
   left: 16px;
@@ -303,7 +303,7 @@
   z-index: 2;
 }
 
-.dock-split::before {
+.dock-gap::before {
   content: '';
   position: absolute;
   left: 0;
@@ -311,6 +311,10 @@
   top: 6px;
   height: 1px;
   background: #c8cfd2;
+}
+
+.dock-gap.join::before {
+  background: transparent;
 }
 
 .connect-card.reordering {

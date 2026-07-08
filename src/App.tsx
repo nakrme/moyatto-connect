@@ -491,6 +491,14 @@ function App() {
     )
   }
 
+  function dockGroupBefore(id: string) {
+    const index = importantIdeas.findIndex((idea) => idea.id === id)
+    const previousIdea = importantIdeas[index - 1]
+    if (!previousIdea) return
+
+    moveConnectIdea(id, previousIdea.id, 'dock')
+  }
+
   function saveTitle() {
     const nextTitle = titleDraft.trim() || 'タイトル'
     setAppTitle(nextTitle)
@@ -592,6 +600,7 @@ function App() {
               onDragReorder={setDragOffsetY}
               onMoveIdea={moveConnectIdea}
               onReturnIdea={toggleImportant}
+              onDockGroupBefore={dockGroupBefore}
               onSplitGroupBefore={splitGroupBefore}
               onStartReorder={startReorder}
               onStopReorder={stopReorder}
@@ -936,6 +945,7 @@ function ConnectTab({
   onDragReorder,
   onEditIdea,
   onMoveIdea,
+  onDockGroupBefore,
   onReturnIdea,
   onSplitGroupBefore,
   onStartReorder,
@@ -948,6 +958,7 @@ function ConnectTab({
   onDragReorder: (offsetY: number) => void
   onEditIdea: (idea: Idea) => void
   onMoveIdea: (sourceId: string, targetId: string, position: ConnectMove) => void
+  onDockGroupBefore: (id: string) => void
   onReturnIdea: (id: string) => void
   onSplitGroupBefore: (id: string) => void
   onStartReorder: (id: string) => void
@@ -955,24 +966,6 @@ function ConnectTab({
   reorderingBlockIds: string[]
   reorderingIdeaId: string | null
 }) {
-  const reorderingIndexes = reorderingBlockIds
-    .map((id) => ideas.findIndex((idea) => idea.id === id))
-    .filter((index) => index >= 0)
-  const firstReorderingIndex =
-    reorderingIndexes.length > 0 ? Math.min(...reorderingIndexes) : -1
-  const lastReorderingIndex =
-    reorderingIndexes.length > 0 ? Math.max(...reorderingIndexes) : -1
-  const adjacentDockIdeas = [
-    ideas[firstReorderingIndex - 1],
-    ideas[lastReorderingIndex + 1],
-  ].filter(Boolean) as Idea[]
-  const adjacentDockIds = adjacentDockIdeas.flatMap((adjacentIdea) => {
-    if (!adjacentIdea.groupId) return [adjacentIdea.id]
-    return ideas
-      .filter((idea) => idea.groupId === adjacentIdea.groupId)
-      .map((idea) => idea.id)
-  })
-
   return (
     <div className="connect-list">
       {ideas.map((idea, index) => {
@@ -980,6 +973,7 @@ function ConnectTab({
         const nextIdea = ideas[index + 1]
         const hasPreviousGroup =
           idea.groupId && previousIdea?.groupId === idea.groupId
+        const hasPreviousIdea = Boolean(previousIdea)
         const hasNextGroup = idea.groupId && nextIdea?.groupId === idea.groupId
         const groupClass = hasPreviousGroup
           ? hasNextGroup
@@ -991,7 +985,7 @@ function ConnectTab({
 
         return (
           <ConnectSwipeCard
-            adjacentDockIds={adjacentDockIds}
+            canDockBefore={hasPreviousIdea && !hasPreviousGroup}
             canSplitBefore={Boolean(hasPreviousGroup)}
             groupClass={groupClass}
             idea={idea}
@@ -1001,6 +995,7 @@ function ConnectTab({
             onDragReorder={onDragReorder}
             onEdit={() => onEditIdea(idea)}
             onMoveIdea={onMoveIdea}
+            onDockBefore={() => onDockGroupBefore(idea.id)}
             onSplitBefore={() => onSplitGroupBefore(idea.id)}
             onSwipeLeft={() => onReturnIdea(idea.id)}
             onStartReorder={() => onStartReorder(idea.id)}
@@ -1015,13 +1010,14 @@ function ConnectTab({
 }
 
 function ConnectSwipeCard({
-  adjacentDockIds,
+  canDockBefore,
   canSplitBefore,
   groupClass,
   idea,
   isReordering,
   offsetY,
   onDragReorder,
+  onDockBefore,
   onEdit,
   onMoveIdea,
   onSplitBefore,
@@ -1031,13 +1027,14 @@ function ConnectSwipeCard({
   reorderingBlockIds,
   reorderingIdeaId,
 }: {
-  adjacentDockIds: string[]
+  canDockBefore: boolean
   canSplitBefore: boolean
   groupClass: string | false | undefined
   idea: Idea
   isReordering: boolean
   offsetY: number
   onDragReorder: (offsetY: number) => void
+  onDockBefore: () => void
   onEdit: () => void
   onMoveIdea: (sourceId: string, targetId: string, position: ConnectMove) => void
   onSplitBefore: () => void
@@ -1099,45 +1096,16 @@ function ConnectSwipeCard({
       draggedCards.length > 0
         ? (draggedBounds.top + draggedBounds.bottom) / 2
         : event.clientY
-    const draggedHeight = draggedBounds.bottom - draggedBounds.top
-    const dockTargets = cards
-      .map((card) => {
-        const rect = card.getBoundingClientRect()
-        const overlap =
-          Math.min(draggedBounds.bottom, rect.bottom) -
-          Math.max(draggedBounds.top, rect.top)
-        const id = card.dataset.connectIdeaId
-        const isAdjacent = id ? adjacentDockIds.includes(id) : false
-        const requiredOverlap = isAdjacent
-          ? 0
-          : Math.min(draggedHeight, rect.height) * 0.45
 
-        return {
-          card,
-          overlap,
-          pointerInside:
-            event.clientY >= rect.top && event.clientY <= rect.bottom,
-          requiredOverlap,
-        }
-      })
-      .filter(({ overlap, requiredOverlap }) => overlap > requiredOverlap)
-    const dockCard =
-      dockTargets.find(({ pointerInside }) => pointerInside) ??
-      dockTargets.sort((a, b) => b.overlap - a.overlap)[0]
+    const beforeCard = cards.find((card) => {
+      const rect = card.getBoundingClientRect()
+      return draggedCenterY < rect.top + rect.height / 2
+    })
+    const targetCard = beforeCard ?? cards.at(-1)
+    const targetId = targetCard?.dataset.connectIdeaId
 
-    if (dockCard?.card.dataset.connectIdeaId) {
-      onMoveIdea(idea.id, dockCard.card.dataset.connectIdeaId, 'dock')
-    } else {
-      const beforeCard = cards.find((card) => {
-        const rect = card.getBoundingClientRect()
-        return draggedCenterY < rect.top + rect.height / 2
-      })
-      const targetCard = beforeCard ?? cards.at(-1)
-      const targetId = targetCard?.dataset.connectIdeaId
-
-      if (targetId) {
-        onMoveIdea(idea.id, targetId, beforeCard ? 'before' : 'after')
-      }
+    if (targetId) {
+      onMoveIdea(idea.id, targetId, beforeCard ? 'before' : 'after')
     }
 
     isDragging.current = false
@@ -1166,13 +1134,14 @@ function ConnectSwipeCard({
       onSwipeLeft={onSwipeLeft}
       onTap={onEdit}
     >
-      {canSplitBefore ? (
+      {canDockBefore || canSplitBefore ? (
         <button
-          aria-label="ここで切り離す"
-          className="dock-split"
+          aria-label={canSplitBefore ? 'ここで切り離す' : 'ここでつなげる'}
+          className={`dock-gap ${canSplitBefore ? 'split' : 'join'}`}
           onClick={(event) => {
             event.stopPropagation()
-            onSplitBefore()
+            if (canSplitBefore) onSplitBefore()
+            else onDockBefore()
           }}
           onPointerDown={(event) => event.stopPropagation()}
           onPointerUp={(event) => event.stopPropagation()}
